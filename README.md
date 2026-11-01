@@ -27,6 +27,7 @@ and then dropped in favor of this true native UI.
 | 6 Packaging polish | **Done, confirmed on CI** (session persistence + background jobs: run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771); installer: run [#17](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41289531613)): session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab), and a real installer (`installer/setup.iss`, Inno Setup - produces `UrbanDryCleanCRM-Setup.exe` with Start Menu/optional desktop shortcuts, per-user install by default so a shop-counter standard account doesn't need an admin prompt). **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | **done** |
 | 7 Laundry (per-weight) mode | `NewLaundryOrderWindow`, opened from Orders ("+ New Laundry Order"): customer search/select (same as piece orders), a batch builder (one weight-priced service from `products`' new `universal_services` + a weight + the individual garments tagged into it), a batches cart, the same order details/estimate pattern as piece orders, submits to `laundry_orders_create`. `WorkshopView` gained Laundry "ready to send" (multi-select garments -> `create_laundry_challan`) and "in progress" queues from `workshop_queue`'s `laundry_pending`/`laundry_in_progress`; double-clicking an in-progress Laundry garment opens the same `WorkshopItemActionsWindow` piece items use (workshop_item_id-based actions don't distinguish piece from laundry server-side), so no new lifecycle UI was needed there. The Accept/Return/Store-Receive queues already mixed piece and laundry items server-side (a `kind` field), so they needed no client changes beyond a Type column. A floating-store account (no fixed store) cannot create a Laundry order at all - `laundry_orders_create` never reads a `store_id` from its payload, unlike `pos_orders_create` - see Known gaps. | **done - confirmed green on CI** (run [#19](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41299026929), first try) |
 | 8 CRM completeness | **Customer edit**: `CustomerFormWindow` now also handles edit (opened from Customer detail's new Edit button), loading `customers_edit_detail` and submitting to `customers_update` - fields the form doesn't show (State, Membership ID, Birthday, Anniversary, Marketing Source, Price List, GSTIN, Referral Code) are carried through unchanged from the loaded record rather than silently blanked, since the backend treats every field in the update payload as the new value. **Split payments**: `RecordPaymentWindow` can now add multiple payment-method lines (Add Line) for one payment, submitted together via `payment_lines[]` - a single fill-and-submit still works exactly as before for the common case. **New report screens**: `DormantCustomersView` (`dormant_customers`, min-days threshold) and `AuditLogView` (`audit_logs`, module/action/date filters, before/after diff panel - Super Admin/Admin only, same gating as Workshop) added as Reports tabs; `CustomerHistoryWindow` (`customer_history` - a combined ledger plus orders/payments/garments/wallet/deliveries/feedback, each its own tab) opened from Customer detail's new History button. | **done - confirmed green on CI** (run [#21](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41301198887), first try) |
+| 9 Workshop management | `WorkshopView` is now a tab strip (Queue / Schedule / Report / Billing) - the old single-page content moved unchanged into a new **Queue** tab (`WorkshopQueueView`); `MainWindow`'s own call site didn't need to change. **Schedule** (`WorkshopScheduleView`): today/tomorrow's due orders by store plus everything overdue, from `workshop_schedule`. **Report** (`WorkshopReportView`): pieces sent out per store over a period (week/15/30 days/custom), with a per-store garment breakdown and customer list, from `workshop_report`. **Billing** (`WorkshopBillingView` + `WorkshopBillingDetailWindow`): the bills list, a Generate Bill form (store - including a combined "all stores" bill - workshop, period, GST mode, basis) for accounts that can manage bills, and a bill detail view with items/payments and a Mark Paid action, from `workshop_billing_list`/`_detail`/`_generate`/`_mark_paid`. Same `workshop.manage`/`workshop.billing` permission gating as the backend - a Workshop Staff login not linked to a workshop sees an empty, disabled Billing tab, same as `wsBillingScope()` intends. | pending CI confirmation |
 
 ## Architecture
 
@@ -155,6 +156,20 @@ machine, not in CI or this sandbox. Each path was hand-checked twice against its
 but that tab strip is worth a real click-through the next time this runs on actual Windows.
 Eight phases building successfully now, seven of them green on the very first CI attempt.
 
+**Phase 9 (Workshop management) is pending its first CI run.** `Udc.Client`'s new tests (61/61,
+up from 54) pass locally - `GetWorkshopScheduleAsync`, `GetWorkshopReportAsync`,
+`GetWorkshopBillingListAsync`/`_DetailAsync`, `GenerateWorkshopBillAsync`,
+`MarkWorkshopBillPaidAsync`. The riskiest part of this phase wasn't new code so much as a rename:
+the entire pre-existing `WorkshopView` (queue screens from Phases 4 and 7) was renamed to
+`WorkshopQueueView` and moved unchanged under a new tab-shell `WorkshopView`, so a mistake there
+would silently break Workshop's single biggest existing screen, not just the new ones. Checked
+directly: `MainWindow`'s own `new WorkshopView(_api)` call site needed no change (same
+constructor signature), and a repo-wide grep confirms only `WorkshopView.xaml.cs` itself
+constructs `WorkshopQueueView` now. `WorkshopScheduleView`, `WorkshopReportView`,
+`WorkshopBillingView`, and `WorkshopBillingDetailWindow` are new and, like every WPF-only phase,
+can't be compiled in this sandbox - the usual XML/x:Name/model-property checks all came back
+clean.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -228,8 +243,6 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
   resolved `universal_services` rate and never lets it be typed in, but this is a client-side
   safeguard only, not a server-enforced one - worth knowing if this API is ever called from
   anywhere else.
-- **No workshop schedule, report, or billing screens** - `workshop_schedule`/`workshop_report`/
-  `workshop_billing_*` aren't wired up; this phase covers day-to-day queue operations only.
 - **`WorkshopItemActionsWindow` shows all 11 lifecycle actions always**, rather than only the
   ones valid for the item's current state - the backend is the authority on validity and returns
   a clear error for an action attempted out of order, so nothing incorrect can actually happen,

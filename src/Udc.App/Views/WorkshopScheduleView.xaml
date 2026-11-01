@@ -1,0 +1,79 @@
+<UserControl x:Class="Udc.App.Views.WorkshopScheduleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgBrush}">
+    <DockPanel>
+        <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- Today -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock x:Name="TodayHeaderText" Text="DUE TODAY" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TodaySummaryText" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="TodayGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="200">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Store" Binding="{Binding StoreName}" Width="*" />
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding Customer}" Width="2*" />
+                                <DataGridTextColumn Header="Due time" Binding="{Binding DueTime}" Width="90" />
+                                <DataGridTextColumn Header="Garments" Binding="{Binding Garments}" Width="90" />
+                                <DataGridTextColumn Header="Bill value" Binding="{Binding BillValue}" Width="100" />
+                                <DataGridTextColumn Header="Statuses" Binding="{Binding Statuses}" Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Tomorrow -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock x:Name="TomorrowHeaderText" Text="DUE TOMORROW" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+                        <TextBlock x:Name="TomorrowSummaryText" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="TomorrowGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="200">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Store" Binding="{Binding StoreName}" Width="*" />
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding Customer}" Width="2*" />
+                                <DataGridTextColumn Header="Due time" Binding="{Binding DueTime}" Width="90" />
+                                <DataGridTextColumn Header="Garments" Binding="{Binding Garments}" Width="90" />
+                                <DataGridTextColumn Header="Bill value" Binding="{Binding BillValue}" Width="100" />
+                                <DataGridTextColumn Header="Statuses" Binding="{Binding Statuses}" Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Overdue -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="OVERDUE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+                        <TextBlock x:Name="OverdueSummaryText" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="OverdueGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="220">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Store" Binding="{Binding StoreName}" Width="*" />
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding Customer}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding Garment}" Width="2*" />
+                                <DataGridTextColumn Header="Qty" Binding="{Binding Qty}" Width="60" />
+                                <DataGridTextColumn Header="Due date" Binding="{Binding DueDate}" Width="100" />
+                                <DataGridTextColumn Header="Days overdue" Binding="{Binding Days}" Width="100" />
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

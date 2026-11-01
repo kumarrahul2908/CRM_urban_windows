@@ -165,6 +165,25 @@ public sealed class ApiClient : IDisposable
     public Task<WorkshopActionResult> CreateLaundryChallanAsync(CreateLaundryChallanRequest request, CancellationToken ct = default) =>
         SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
 
+    public Task<WorkshopScheduleResult> GetWorkshopScheduleAsync(CancellationToken ct = default) =>
+        SendAsync<WorkshopScheduleResult>(HttpMethod.Get, "/api/mobile/workshop_schedule", null, ct);
+
+    public Task<WorkshopReportResult> GetWorkshopReportAsync(string period = "week", int? storeId = null, string from = "", string to = "", CancellationToken ct = default) =>
+        SendAsync<WorkshopReportResult>(HttpMethod.Get, "/api/mobile/workshop_report" + BuildQuery(
+            ("period", period), ("store_id", storeId?.ToString() ?? ""), ("from", from), ("to", to)), null, ct);
+
+    public Task<WorkshopBillingListResult> GetWorkshopBillingListAsync(string status = "", CancellationToken ct = default) =>
+        SendAsync<WorkshopBillingListResult>(HttpMethod.Get, "/api/mobile/workshop_billing_list" + BuildQuery(("status", status)), null, ct);
+
+    public Task<WorkshopBillingDetailResult> GetWorkshopBillingDetailAsync(int id, CancellationToken ct = default) =>
+        SendAsync<WorkshopBillingDetailResult>(HttpMethod.Get, "/api/mobile/workshop_billing_detail" + BuildQuery(("id", id.ToString())), null, ct);
+
+    public Task<GenerateWorkshopBillResult> GenerateWorkshopBillAsync(GenerateWorkshopBillRequest request, CancellationToken ct = default) =>
+        SendAsync<GenerateWorkshopBillResult>(HttpMethod.Post, "/api/mobile/workshop_billing_generate", request, ct);
+
+    public Task<MarkWorkshopBillPaidResult> MarkWorkshopBillPaidAsync(MarkWorkshopBillPaidRequest request, CancellationToken ct = default) =>
+        SendAsync<MarkWorkshopBillPaidResult>(HttpMethod.Post, "/api/mobile/workshop_billing_mark_paid", request, ct);
+
     // ---- barcode --------------------------------------------------------------------------------
 
     public Task<BarcodeLookupResult> LookupBarcodeAsync(string barcode, CancellationToken ct = default) =>
