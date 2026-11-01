@@ -24,7 +24,7 @@ and then dropped in favor of this true native UI.
 | 3 POS / order creation (piece mode) | `NewOrderWindow`, opened from Orders ("+ New Order"): customer search/select (pulls their price list + wallet/outstanding via `pos_customer_summary`), store picker when the user has no fixed store, garment/service catalog from `products` (price-list-aware rates in one call), a cart, due date/urgent level/discount/home delivery/notes, a clearly-labeled client-side estimate (excludes tax/urgent charge - those are server-computed), submits to `pos_orders_create`. Laundry/per-weight order creation, collecting payment at order-creation time, and rate overrides are explicitly out of scope here - see Known gaps. | **done - confirmed green on CI** (run [#9](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41282863270), first try - no compile errors this time) |
 | 4 Workshop (piece items) + Barcode | `WorkshopView`: ready-to-send queue (multi-select + send to a workshop via a challan), in-progress queue, and the accept/return-to-store/store-receive queues, each with their own action. Double-clicking an in-progress item opens `WorkshopItemActionsWindow`, exposing all 11 lifecycle actions (start processing through QC/ironing/packaging, accept/return/receive, mark/resolve unprocessed) - the server is the single source of truth for which one is actually valid from the item's current state, same discipline as every other screen. `BarcodeLookupView`: scan or type a barcode, see the garment/order/customer/status. Laundry (per-weight) queues, workshop schedule/report, and workshop billing are explicitly out of scope - see Known gaps. | **done - confirmed green on CI** (run [#11](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41283747344), first try) |
 | 5 Reports | `ReportsView` (tab strip over three sub-screens): **Summary** (`reports_summary` for a date range - sales/payments/customers/workshop operations, with by-service/top-garments/top-customers breakdowns), **Outstanding** (`outstanding_list` - ageing buckets, searchable, per-customer totals), **Daily Collection** (`daily_collection` - by payment method, with the day's payment list). "Admin" (users/roles/settings) turned out not to be achievable from this app at all - see Known gaps. | **done - confirmed green on CI** (run [#13](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41284803320), first try) |
-| 6 Packaging polish | **Done:** session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab). **In progress:** a real installer. **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | **done (code, this slice) - not yet confirmed on CI**, see Verification below |
+| 6 Packaging polish | **Done, confirmed on CI (run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771)):** session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab). **In progress:** a real installer. **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | in progress |
 
 ## Architecture
 
@@ -115,19 +115,11 @@ by-hand model-property check both paid off again.
 went green on the first try - 36/36 tests, and all four new Reports screens compiled cleanly.
 Five phases in a row now building successfully on real Windows.
 
-**Phase 6, session persistence + background jobs, is not yet confirmed** - built in the same
-Linux sandbox:
-
-- `dotnet build` / `dotnet test` on `Udc.Client` + `Udc.Client.Tests`: **passing** (42 tests -
-  the prior 36 plus 2 covering `SessionRestore.FromMe()` and 4 covering
-  `BackgroundJobRunner.TimeUntil()`'s daily-schedule math - today-vs-tomorrow rollover, and the
-  exactly-now edge case). `BackgroundJobRunner`'s `TimeUntil` bug class (an off-by-one in the
-  rollover check) is exactly the kind of thing worth a dedicated test, so it got four.
-- `App.xaml.cs`'s session-restore wiring and `BackgroundJobRunner`'s process-spawning: **written
-  and reviewed by hand, not yet compiled anywhere** - same as every phase before it. One real
-  compile error was caught locally this time before ever reaching CI: `BackgroundJobRunner.cs`
-  used `Timer` without `using System.Threading;` - `dotnet build` on `Udc.Client` catches that
-  class of bug directly (it's plain C#, not a WPF-only issue), unlike Phase 2's miss.
+**Phase 6 part 1 (session persistence + background jobs) is confirmed**: [CI run #15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771)
+went green - 42/42 tests, `App.xaml.cs`'s session-restore wiring and `BackgroundJobRunner`
+compiled cleanly. One real compile error (`Timer` used without `using System.Threading;`) was
+caught locally in this sandbox before ever reaching CI this time - `dotnet build` on
+`Udc.Client` catches that class of bug directly, since it's plain C#, not a WPF-only issue.
 
 ## Building
 
