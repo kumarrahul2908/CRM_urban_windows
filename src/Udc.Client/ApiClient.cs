@@ -122,5 +122,22 @@ public sealed class ApiClient : IDisposable
     public Task<RecordPaymentResult> RecordPaymentAsync(RecordPaymentRequest request, CancellationToken ct = default) =>
         SendAsync<RecordPaymentResult>(HttpMethod.Post, "/api/mobile/orders_record_payment", request, ct);
 
+    // ---- POS / order creation -----------------------------------------------------------------
+
+    public Task<ProductsResult> GetProductsAsync(int customerId, string search = "", int perPage = 300, CancellationToken ct = default) =>
+        SendAsync<ProductsResult>(HttpMethod.Get, "/api/mobile/products" + BuildQuery(("customer_id", customerId.ToString()), ("q", search), ("per_page", perPage.ToString())), null, ct);
+
+    public Task<PosCustomerSummary> GetPosCustomerSummaryAsync(int customerId, CancellationToken ct = default) =>
+        SendAsync<PosCustomerSummary>(HttpMethod.Get, "/api/mobile/pos_customer_summary" + BuildQuery(("customer_id", customerId.ToString())), null, ct);
+
+    public async Task<List<UrgentLevel>> GetUrgentLevelsAsync(CancellationToken ct = default) =>
+        (await SendAsync<UrgentLevelsResult>(HttpMethod.Get, "/api/mobile/urgent_levels", null, ct)).UrgentLevels;
+
+    public Task<PosAvailableStoresResult> GetAvailableStoresAsync(CancellationToken ct = default) =>
+        SendAsync<PosAvailableStoresResult>(HttpMethod.Get, "/api/mobile/pos_available_stores", null, ct);
+
+    public Task<CreateOrderResult> CreateOrderAsync(CreateOrderRequest request, CancellationToken ct = default) =>
+        SendAsync<CreateOrderResult>(HttpMethod.Post, "/api/mobile/pos_orders_create", request, ct);
+
     public void Dispose() => _http.Dispose();
 }

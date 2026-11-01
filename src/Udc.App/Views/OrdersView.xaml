@@ -9,7 +9,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Orders" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1" Text="New order (POS) - coming in a later phase" FontSize="11.5" FontStyle="Italic" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="+ New Order" Style="{StaticResource PrimaryButton}" Click="NewOrderButton_Click" />
         </Grid>
 
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">

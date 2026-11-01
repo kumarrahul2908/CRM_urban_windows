@@ -20,8 +20,8 @@ and then dropped in favor of this true native UI.
 | Phase | Scope | Status |
 |---|---|---|
 | 1 Foundation | Solution scaffold (`Udc.Client` testable class library + `Udc.App` WPF UI); `AppConfig`/`ConfigStore`/`TokenStore` (DPAPI-encrypted); `BackendProcessManager` (bundles + launches a portable Node runtime); `DbConnectionTester` (native MySQL connection test, no backend needed); `ApiClient` (typed wrapper over `/api/mobile/*`); Setup window (first-run DB config + test), Splash window, Login window, main shell window (menu, sidebar) with a real **Dashboard** screen (stat cards + 7-day sales) backed by live data from `dashboard_summary`; CI build (`windows-latest`, self-contained `dotnet publish` + portable Node bundling + backend clone-and-build) | **done - confirmed green on `windows-latest` CI** (run [#6](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41279323189)): tests pass, `Udc.App` compiles, backend clones/builds/bundles, artifact produced |
-| 2 Customers + Orders (view) | **Customers:** list (search + pagination), detail (contact info, price list, wallet balance, outstanding), create. **Orders:** list (search + pagination), detail (items, payments, status, balance due), Record Payment (single payment line). Sidebar navigation wired up (Dashboard / Customers / Orders). | **done (code) - not yet confirmed on CI**, see Verification below |
-| 3 POS / order creation | New order screen (piece + laundry): garment/service catalog browsing, price-list-aware rates, cart, discounts, submit. This is the single biggest remaining screen (the real app's `OrderService.createOrder()` alone is ~2000 lines) - deliberately split out from Phase 2 rather than rushed. | planned |
+| 2 Customers + Orders (view) | **Customers:** list (search + pagination), detail (contact info, price list, wallet balance, outstanding), create. **Orders:** list (search + pagination), detail (items, payments, status, balance due), Record Payment (single payment line). Sidebar navigation wired up (Dashboard / Customers / Orders). | **done - confirmed green on CI** (run [#8](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41281236864), after one real compile-error fix CI caught - a model property the UI referenced but the DTO never defined) |
+| 3 POS / order creation (piece mode) | `NewOrderWindow`, opened from Orders ("+ New Order"): customer search/select (pulls their price list + wallet/outstanding via `pos_customer_summary`), store picker when the user has no fixed store, garment/service catalog from `products` (price-list-aware rates in one call), a cart, due date/urgent level/discount/home delivery/notes, a clearly-labeled client-side estimate (excludes tax/urgent charge - those are server-computed), submits to `pos_orders_create`. Laundry/per-weight order creation, collecting payment at order-creation time, and rate overrides are explicitly out of scope here - see Known gaps. | **done (code) - not yet confirmed on CI**, see Verification below |
 | 4 Workshop + Barcode | QC/Ironing/Packaging queue screens, challans, barcode/tag scanning + printing | planned |
 | 5 Reports + Admin | Reports, master data, admin settings, users/roles, WhatsApp admin | planned |
 | 6 Packaging polish | Proper installer (MSIX or WiX) with Start Menu/Desktop shortcuts, code signing, auto-update, background jobs (WhatsApp worker, nightly backup, photo cleanup - see Known gaps) | planned |
@@ -94,19 +94,24 @@ Windows-only bugs a Linux sandbox could never have caught by review alone (see g
 `BACKEND_REPO_TOKEN` auth and `execFileSync` needing `shell:true` for `npm` on Windows) - both
 now fixed.
 
-**Phase 2 (Customers + Orders view) is not yet confirmed** - built in the same Linux sandbox:
+**Phase 2 is confirmed**: [CI run #8](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41281236864)
+is green, after one real fix along the way - `OrderDetailWindow.xaml.cs` read `OrderHeader.Color`
+to tint the status badge, but `OrderModels.cs` never defined that property, and only a real
+compiler catches a missing-model-property bug like that (the Linux sandbox's `dotnet build` can
+build `Udc.Client` alone, so it has nothing that references `Udc.App`'s own code to check
+against).
 
-- `dotnet build` / `dotnet test` on `Udc.Client` + `Udc.Client.Tests`: **passing** (21 tests -
-  the original 13 plus 8 new ones covering `GetCustomersAsync`/`GetCustomerDetailAsync`/
-  `CreateCustomerAsync`/`GetOrdersAsync`/`GetOrderDetailAsync`/`GetPaymentTypesAsync`/
-  `RecordPaymentAsync` against a fake `HttpMessageHandler`, including the duplicate-customer
-  error path and query-string building).
-- The new WPF screens (`CustomersView`, `CustomerDetailWindow`, `CustomerFormWindow`,
-  `OrdersView`, `OrderDetailWindow`, `RecordPaymentWindow`) and the `MainWindow` sidebar
-  navigation wiring: **written and reviewed by hand, not yet compiled anywhere** - same
-  Windows-only-toolchain limitation as Phase 1. Treat this phase as reviewed-but-unverified until
-  the next CI run is green; given Phase 1's experience, don't be surprised if a Windows-only
-  issue turns up that this review couldn't catch.
+**Phase 3 (POS / order creation) is not yet confirmed** - built in the same Linux sandbox:
+
+- `dotnet build` / `dotnet test` on `Udc.Client` + `Udc.Client.Tests`: **passing** (27 tests -
+  the prior 21 plus 6 new ones covering `GetProductsAsync`/`GetPosCustomerSummaryAsync`/
+  `GetUrgentLevelsAsync`/`GetAvailableStoresAsync`/`CreateOrderAsync` against a fake
+  `HttpMessageHandler`, including query-string building and the validation-failure error path).
+- `NewOrderWindow` (plus the "+ New Order" button wired into `OrdersView`): **written and
+  reviewed by hand, not yet compiled anywhere** - same Windows-only-toolchain limitation as every
+  prior phase. This is the largest single screen so far; every model property it reads was
+  cross-checked by hand against its DTO definition after Phase 2's miss, but treat it as
+  reviewed-but-unverified until CI confirms it, the same as every phase before it.
 
 ## Building
 
@@ -162,8 +167,16 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 - **Session isn't restored on restart.** `TokenStore` saves the bearer token on login, but
   `App.xaml.cs` doesn't yet try it before showing the Login window - every launch requires
   signing in again.
-- **No order creation (POS) yet** - see Phase 3. Orders can only be viewed, not created, from
-  this app so far.
+- **Order creation covers piece mode only** - laundry/per-weight orders (`laundry_orders_create`)
+  aren't wired up; use the web app for those until a later phase adds it.
+- **No payment collected at order-creation time** - `NewOrderWindow` doesn't expose the
+  `payments`/`wallet_amount` fields `pos_orders_create` accepts; record payment separately right
+  after via the existing Record Payment screen.
+- **No rate overrides / manual pricing / brand-color-remarks per item** in the New Order cart -
+  every line uses the catalog's own piece rate for the customer's price list as-is.
+- **The New Order total shown while building the cart is an estimate** (subtotal, the typed
+  discount, and delivery charge only) - tax and the urgent-level surcharge are computed
+  server-side and only appear in the real total once the order is actually created.
 - **Record Payment supports one payment line only** - the backend accepts a split across several
   payment methods in one go (`payment_lines[]`); the UI only exposes a single method for now.
 - **No customer edit** - only create and view; `customers_update` isn't wired up yet.

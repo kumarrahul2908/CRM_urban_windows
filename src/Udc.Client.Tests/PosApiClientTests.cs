@@ -1,0 +1,104 @@
+using System.Net;
+using Udc.Client;
+using Udc.Client.Models;
+using Xunit;
+
+namespace Udc.Client.Tests;
+
+public class PosApiClientTests
+{
+    [Fact]
+    public async Task GetProductsAsync_ParsesGarmentsWithRates()
+    {
+        var body = """
+        {"success":true,"data":{
+          "price_list":{"id":3,"name":"Default"},
+          "garments":[{"id":10,"name":"Shirt","sku":"SH1","category_name":"Formal","default_service_id":1,
+            "rates":[{"service_id":1,"service_name":"Wash & Iron","billing_unit":"piece","piece_rate":40,"weight_rate":null,"tax_percent":0}]}],
+          "universal_services":[],"total":1}}
+        """;
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.GetProductsAsync(customerId: 1, search: "shirt");
+
+        Assert.Equal("Default", result.PriceList!.Name);
+        Assert.Single(result.Garments);
+        Assert.Single(result.Garments[0].Rates);
+        Assert.Equal(40m, result.Garments[0].Rates[0].PieceRate);
+        Assert.Equal("/api/mobile/products", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal("?customer_id=1&q=shirt&per_page=300", handler.LastRequest.RequestUri!.Query);
+    }
+
+    [Fact]
+    public async Task GetPosCustomerSummaryAsync_ParsesCustomerAndPriceList()
+    {
+        var body = """
+        {"success":true,"data":{"customer":{"id":1,"name":"Asha Rao","mobile":"9000000000","home_delivery":true,"discount_percent":5},
+          "price_list_name":"Default","outstanding":120,"wallet_balance":50}}
+        """;
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var result = await client.GetPosCustomerSummaryAsync(1);
+
+        Assert.Equal("Asha Rao", result.Customer.Name);
+        Assert.True(result.Customer.HomeDelivery);
+        Assert.Equal(120m, result.Outstanding);
+    }
+
+    [Fact]
+    public async Task GetUrgentLevelsAsync_UnwrapsTheList()
+    {
+        var body = """{"success":true,"data":{"urgent_levels":[{"id":1,"level_name":"Express","surcharge_percent":20}]}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var levels = await client.GetUrgentLevelsAsync();
+
+        Assert.Single(levels);
+        Assert.Equal("Express", levels[0].LevelName);
+    }
+
+    [Fact]
+    public async Task GetAvailableStoresAsync_ParsesIsFixed()
+    {
+        var body = """{"success":true,"data":{"stores":[{"id":1,"store_name":"Main Branch"}],"is_fixed":true}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var result = await client.GetAvailableStoresAsync();
+
+        Assert.True(result.IsFixed);
+        Assert.Equal("Main Branch", result.Stores[0].StoreName);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_SendsItemsAndParsesResult()
+    {
+        var body = """{"success":true,"data":{"order_id":77,"order_number":"ST-0077","invoice_number":"INV-0077","grand_total":80,"warnings":[]}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.CreateOrderAsync(new CreateOrderRequest
+        {
+            ClientRequestId = "test-order-1",
+            CustomerId = 1,
+            Items = new List<CreateOrderItemLine> { new() { GarmentId = 10, ServiceId = 1, Quantity = 2 } },
+        });
+
+        Assert.Equal(77, result.OrderId);
+        Assert.Equal("ST-0077", result.OrderNumber);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/api/mobile/pos_orders_create", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_ValidationFailure_ThrowsWithServerMessage()
+    {
+        var body = """{"success":false,"error":{"code":"validation_failed","message":"Add at least one garment to the order."}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.UnprocessableEntity, body));
+
+        var ex = await Assert.ThrowsAsync<ApiException>(() => client.CreateOrderAsync(new CreateOrderRequest { CustomerId = 1 }));
+
+        Assert.Equal("validation_failed", ex.Code);
+        Assert.Contains("at least one garment", ex.Message);
+    }
+}

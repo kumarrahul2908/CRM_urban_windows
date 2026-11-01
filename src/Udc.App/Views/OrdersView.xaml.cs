@@ -72,4 +72,10 @@ public partial class OrdersView : UserControl
             await LoadAsync(); // a payment may have been recorded while the detail window was open
         }
     }
+
+    private async void NewOrderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var form = new NewOrderWindow(_api) { Owner = Window.GetWindow(this) };
+        if (form.ShowDialog() == true) await LoadAsync();
+    }
 }
