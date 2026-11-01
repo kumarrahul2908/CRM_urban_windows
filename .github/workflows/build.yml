@@ -35,3 +35,16 @@ jobs:
           name: urban-dry-clean-crm-native-win-x64
           path: ${{ env.PUBLISH_DIR }}
           if-no-files-found: error
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build the installer (installer/setup.iss -> installer/Output/UrbanDryCleanCRM-Setup.exe)
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss'
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UrbanDryCleanCRM-Setup
+          path: installer/Output/UrbanDryCleanCRM-Setup.exe
+          if-no-files-found: error
