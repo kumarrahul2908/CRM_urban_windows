@@ -53,6 +53,7 @@ public partial class MainWindow : Window
     {
         _ = _api.LogoutAsync(); // best-effort; the session is gone client-side either way
         TokenStore.Clear();
+        _api.BearerToken = null;
         _closeReason = CloseReason.LoggedOut;
         Close();
     }

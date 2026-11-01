@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Udc.App.Views;
 using Udc.Client;
+using Udc.Client.Models;
 
 namespace Udc.App;
 
@@ -10,6 +11,7 @@ public partial class App : System.Windows.Application
     public static readonly BackendProcessManager Backend = new();
     public static AppConfig? CurrentConfig { get; private set; }
     public static ApiClient? Api { get; private set; }
+    private static BackgroundJobRunner? _jobs;
 
     private static StreamWriter? _logWriter;
 
@@ -88,32 +90,62 @@ public partial class App : System.Windows.Application
         }
 
         Api = new ApiClient($"http://127.0.0.1:{config.Port}");
+
+        _jobs?.Stop();
+        _jobs = new BackgroundJobRunner(config, Log);
+        _jobs.Start();
+
+        var savedToken = TokenStore.Load();
+        if (!string.IsNullOrEmpty(savedToken))
+        {
+            splash.SetStatus("Restoring your session...");
+            Api.BearerToken = savedToken;
+            try
+            {
+                var me = await Api.GetMeAsync();
+                splash.Close();
+                ShowMainWindow(SessionRestore.FromMe(savedToken, me));
+                return;
+            }
+            catch (ApiException)
+            {
+                // expired/revoked token (or a first run against a different database) - fall
+                // through to a normal login, same as if nothing had been saved at all
+                TokenStore.Clear();
+                Api.BearerToken = null;
+            }
+        }
+
         splash.Close();
         ShowLoginWindow();
+    }
+
+    private static void ShowMainWindow(LoginResult loginResult)
+    {
+        var main = new MainWindow(Api!, loginResult);
+        main.LoggedOut += ShowLoginWindow;
+        main.SettingsRequested += () =>
+        {
+            _jobs?.Stop();
+            Backend.Stop();
+            ShowSetupWindow(CurrentConfig);
+        };
+        main.UserQuit += () => Current.Shutdown();
+        Current.MainWindow = main;
+        main.Show();
     }
 
     private static void ShowLoginWindow()
     {
         var login = new LoginWindow(Api!);
-        login.LoggedIn += loginResult =>
-        {
-            var main = new MainWindow(Api!, loginResult);
-            main.LoggedOut += ShowLoginWindow;
-            main.SettingsRequested += () =>
-            {
-                Backend.Stop();
-                ShowSetupWindow(CurrentConfig);
-            };
-            main.UserQuit += () => Current.Shutdown();
-            Current.MainWindow = main;
-            main.Show();
-        };
+        login.LoggedIn += ShowMainWindow;
         login.Cancelled += () => Current.Shutdown();
         login.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _jobs?.Stop();
         Backend.Stop();
         _logWriter?.Dispose();
         base.OnExit(e);
