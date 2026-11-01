@@ -25,6 +25,7 @@ and then dropped in favor of this true native UI.
 | 4 Workshop (piece items) + Barcode | `WorkshopView`: ready-to-send queue (multi-select + send to a workshop via a challan), in-progress queue, and the accept/return-to-store/store-receive queues, each with their own action. Double-clicking an in-progress item opens `WorkshopItemActionsWindow`, exposing all 11 lifecycle actions (start processing through QC/ironing/packaging, accept/return/receive, mark/resolve unprocessed) - the server is the single source of truth for which one is actually valid from the item's current state, same discipline as every other screen. `BarcodeLookupView`: scan or type a barcode, see the garment/order/customer/status. Laundry (per-weight) queues, workshop schedule/report, and workshop billing are explicitly out of scope - see Known gaps. | **done - confirmed green on CI** (run [#11](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41283747344), first try) |
 | 5 Reports | `ReportsView` (tab strip over three sub-screens): **Summary** (`reports_summary` for a date range - sales/payments/customers/workshop operations, with by-service/top-garments/top-customers breakdowns), **Outstanding** (`outstanding_list` - ageing buckets, searchable, per-customer totals), **Daily Collection** (`daily_collection` - by payment method, with the day's payment list). "Admin" (users/roles/settings) turned out not to be achievable from this app at all - see Known gaps. | **done - confirmed green on CI** (run [#13](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41284803320), first try) |
 | 6 Packaging polish | **Done, confirmed on CI** (session persistence + background jobs: run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771); installer: run [#17](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41289531613)): session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab), and a real installer (`installer/setup.iss`, Inno Setup - produces `UrbanDryCleanCRM-Setup.exe` with Start Menu/optional desktop shortcuts, per-user install by default so a shop-counter standard account doesn't need an admin prompt). **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | **done** |
+| 7 Laundry (per-weight) mode | `NewLaundryOrderWindow`, opened from Orders ("+ New Laundry Order"): customer search/select (same as piece orders), a batch builder (one weight-priced service from `products`' new `universal_services` + a weight + the individual garments tagged into it), a batches cart, the same order details/estimate pattern as piece orders, submits to `laundry_orders_create`. `WorkshopView` gained Laundry "ready to send" (multi-select garments -> `create_laundry_challan`) and "in progress" queues from `workshop_queue`'s `laundry_pending`/`laundry_in_progress`; double-clicking an in-progress Laundry garment opens the same `WorkshopItemActionsWindow` piece items use (workshop_item_id-based actions don't distinguish piece from laundry server-side), so no new lifecycle UI was needed there. The Accept/Return/Store-Receive queues already mixed piece and laundry items server-side (a `kind` field), so they needed no client changes beyond a Type column. A floating-store account (no fixed store) cannot create a Laundry order at all - `laundry_orders_create` never reads a `store_id` from its payload, unlike `pos_orders_create` - see Known gaps. | pending CI confirmation |
 
 ## Architecture
 
@@ -133,6 +134,15 @@ under Wine in this Linux sandbox failed at the very first step (the installer do
 as an HTML page, not the real `.exe`), so this one relied entirely on the real `windows-latest`
 CI run, same as every WPF screen in every earlier phase.
 
+**Phase 7 (Laundry/per-weight mode) is pending its first CI run.** `Udc.Client`'s new tests (47/47,
+up from 42) pass locally - `GetProductsAsync`'s new `universal_services` parsing,
+`CreateLaundryOrderAsync`, `CreateLaundryChallanAsync`, and `GetWorkshopQueueAsync`'s new
+`laundry_pending`/`laundry_in_progress` parsing. `NewLaundryOrderWindow` and the `WorkshopView`
+additions are WPF-only and, as with every earlier phase, can't be compiled in this Linux sandbox -
+every new/changed `.xaml` was checked for well-formed XML, every `x:Name` was cross-checked
+against its code-behind (and vice versa) across the whole app, and every new model-property
+access was hand-checked against its `Udc.Client` model definition.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -181,21 +191,34 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 
 ## Known gaps
 
-- **Order creation covers piece mode only** - laundry/per-weight orders (`laundry_orders_create`)
-  aren't wired up; use the web app for those until a later phase adds it.
-- **No payment collected at order-creation time** - `NewOrderWindow` doesn't expose the
-  `payments`/`wallet_amount` fields `pos_orders_create` accepts; record payment separately right
-  after via the existing Record Payment screen.
+- **No payment collected at order-creation time** - neither `NewOrderWindow` nor
+  `NewLaundryOrderWindow` expose the `payments`/`wallet_amount` fields `pos_orders_create` and
+  `laundry_orders_create` accept; record payment separately right after via the existing Record
+  Payment screen.
 - **No rate overrides / manual pricing / brand-color-remarks per item** in the New Order cart -
   every line uses the catalog's own piece rate for the customer's price list as-is.
-- **The New Order total shown while building the cart is an estimate** (subtotal, the typed
-  discount, and delivery charge only) - tax and the urgent-level surcharge are computed
+- **The New Order / New Laundry Order total shown while building is an estimate** (subtotal, the
+  typed discount, and delivery charge only) - tax and the urgent-level surcharge are computed
   server-side and only appear in the real total once the order is actually created.
+- **A floating-store account (no fixed store) cannot create a Laundry order at all, and this isn't
+  something the client can work around.** Checked `laundry_orders_create` in orders.ts: unlike
+  `pos_orders_create`, it calls `resolveAuthorizedStoreId(db, ctx)` with no second argument, so it
+  never reads a `store_id` from the request body - it always resolves the signed-in user's own
+  fixed store and fails outright (`needs_selection` with nothing the client can supply to satisfy
+  it) for anyone without one. `NewLaundryOrderWindow` detects this up front (via
+  `pos_available_stores`' `is_fixed`) and blocks the whole form with an explanation rather than
+  letting the user fill it in and hit a guaranteed error. Fixing this for real needs a backend
+  change (accepting `store_id` the way the piece-order endpoint does) - out of scope here.
+- **`laundry_orders_create` trusts the client-supplied batch `rate` rather than resolving it
+  server-side.** Unlike `pos_orders_create`'s `priceLine()`, `OrderService.createLaundryOrder()`
+  takes `batch.rate` directly from the request body (only checking it's `> 0`) - it never looks up
+  the price list itself. `NewLaundryOrderWindow` always fills this from the already-price-list-
+  resolved `universal_services` rate and never lets it be typed in, but this is a client-side
+  safeguard only, not a server-enforced one - worth knowing if this API is ever called from
+  anywhere else.
 - **Record Payment supports one payment line only** - the backend accepts a split across several
   payment methods in one go (`payment_lines[]`); the UI only exposes a single method for now.
 - **No customer edit** - only create and view; `customers_update` isn't wired up yet.
-- **Workshop covers piece items only** - the laundry (per-weight) pending/in-progress queues
-  `workshop_queue` also returns aren't shown; use the web app for laundry-mode workshop tracking.
 - **No workshop schedule, report, or billing screens** - `workshop_schedule`/`workshop_report`/
   `workshop_billing_*` aren't wired up; this phase covers day-to-day queue operations only.
 - **`WorkshopItemActionsWindow` shows all 11 lifecycle actions always**, rather than only the

@@ -101,4 +101,62 @@ public class PosApiClientTests
         Assert.Equal("validation_failed", ex.Code);
         Assert.Contains("at least one garment", ex.Message);
     }
+
+    [Fact]
+    public async Task GetProductsAsync_ParsesUniversalServices()
+    {
+        var body = """
+        {"success":true,"data":{
+          "price_list":{"id":3,"name":"Default"},
+          "garments":[{"id":10,"name":"Shirt","sku":"SH1","category_name":"Formal","default_service_id":1,"rates":[]}],
+          "universal_services":[{"service_id":5,"service_name":"Wash & Fold","billing_unit":"weight","piece_rate":null,"weight_rate":60,"tax_percent":0}],
+          "total":1}}
+        """;
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var result = await client.GetProductsAsync(customerId: 1);
+
+        Assert.Single(result.UniversalServices);
+        Assert.Equal("Wash & Fold", result.UniversalServices[0].ServiceName);
+        Assert.Equal(60m, result.UniversalServices[0].WeightRate);
+    }
+
+    [Fact]
+    public async Task CreateLaundryOrderAsync_SendsBatchesAndParsesResult()
+    {
+        var body = """{"success":true,"data":{"order_id":90,"order_number":"ST-0090","grand_total":300,"warnings":[]}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.CreateLaundryOrderAsync(new CreateLaundryOrderRequest
+        {
+            ClientRequestId = "test-laundry-1",
+            CustomerId = 1,
+            Batches = new List<CreateLaundryBatchLine>
+            {
+                new()
+                {
+                    ServiceId = 5, Weight = 5, Rate = 60, GarmentCount = 2,
+                    Garments = new List<LaundryBatchGarmentLine> { new() { GarmentId = 10, Quantity = 2 } },
+                },
+            },
+        });
+
+        Assert.Equal(90, result.OrderId);
+        Assert.Equal("ST-0090", result.OrderNumber);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/api/mobile/laundry_orders_create", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task CreateLaundryOrderAsync_ValidationFailure_ThrowsWithServerMessage()
+    {
+        var body = """{"success":false,"error":{"code":"validation_failed","message":"Add at least one Laundry batch to the order."}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.UnprocessableEntity, body));
+
+        var ex = await Assert.ThrowsAsync<ApiException>(() => client.CreateLaundryOrderAsync(new CreateLaundryOrderRequest { CustomerId = 1 }));
+
+        Assert.Equal("validation_failed", ex.Code);
+        Assert.Contains("at least one Laundry batch", ex.Message);
+    }
 }

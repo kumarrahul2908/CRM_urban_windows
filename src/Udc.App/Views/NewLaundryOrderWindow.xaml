@@ -1,0 +1,206 @@
+<Window x:Class="Udc.App.Views.NewLaundryOrderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="New Laundry Order"
+        Height="900" Width="980"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BgBrush}">
+    <DockPanel Margin="24">
+        <TextBlock DockPanel.Dock="Top" Text="New Laundry Order (Per-Weight)" FontSize="19" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,16" />
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,16,0,0">
+            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="EstimateText" VerticalAlignment="Center" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock Grid.Column="1" x:Name="EstimateTotalText" VerticalAlignment="Center" FontSize="17" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" />
+                </Grid>
+            </Border>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="CancelButton_Click" />
+                <Button x:Name="CreateOrderButton" Content="Create Laundry Order" Style="{StaticResource PrimaryButton}" Click="CreateOrderButton_Click" />
+            </StackPanel>
+        </StackPanel>
+
+        <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <Border x:Name="NoStoreBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
+            <TextBlock Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
+                       Text="Your account has no fixed store. The backend's Laundry order endpoint (laundry_orders_create) always uses the signed-in user's own fixed store and has no way to accept a store choice from this app - a floating-store account can't create a Laundry order here. Use the web app instead, or sign in with a fixed-store account." />
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- Customer -->
+                <Border x:Name="CustomerCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="CUSTOMER" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+
+                        <StackPanel x:Name="CustomerSearchPanel">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" x:Name="CustomerSearchBox" KeyDown="CustomerSearchBox_KeyDown" />
+                                <Button Grid.Column="2" Content="Find" Style="{StaticResource SecondaryButton}" Click="CustomerSearchButton_Click" />
+                            </Grid>
+                            <ListBox x:Name="CustomerResultsList" MaxHeight="140" Margin="0,8,0,0" Visibility="Collapsed" MouseDoubleClick="CustomerResultsList_MouseDoubleClick" />
+                        </StackPanel>
+
+                        <Border x:Name="SelectedCustomerCard" Background="{StaticResource BgBrush}" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock x:Name="SelectedCustomerText" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="SelectedCustomerSubText" FontSize="11.5" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Change" Style="{StaticResource SecondaryButton}" Click="ChangeCustomerButton_Click" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Add a batch -->
+                <Border x:Name="BatchCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16" IsEnabled="False">
+                    <StackPanel>
+                        <TextBlock Text="ADD A BATCH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="A batch is one weight-priced service (e.g. Wash &amp; Fold) plus the individual garments being tagged into it." FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" TextWrapping="Wrap" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Service" />
+                                <ComboBox x:Name="ServiceBox" DisplayMemberPath="ServiceName" SelectionChanged="ServiceBox_SelectionChanged" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Rate / kg" />
+                                <TextBlock x:Name="RateText" Text="-" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4">
+                                <Label Content="Weight (kg)" />
+                                <TextBox x:Name="WeightBox" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Tag garments for this batch (must add up to the batch's total garment count):" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" x:Name="GarmentBox" DisplayMemberPath="Name" />
+                            <TextBox Grid.Column="2" x:Name="GarmentQuantityBox" Text="1" />
+                            <Button Grid.Column="4" Content="Add Garment" Style="{StaticResource SecondaryButton}" Click="AddGarmentButton_Click" />
+                        </Grid>
+
+                        <DataGrid x:Name="BatchGarmentsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="110" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="90" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Remove Selected Garment" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="RemoveGarmentButton_Click" />
+                            <Button Grid.Column="1" Content="Add Batch to Order" Style="{StaticResource PrimaryButton}" Click="AddBatchButton_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Batches -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="BATCHES" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="BatchesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="140" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Service" Binding="{Binding ServiceName}" Width="2*" />
+                                <DataGridTextColumn Header="Weight (kg)" Binding="{Binding Weight}" Width="100" />
+                                <DataGridTextColumn Header="Rate" Binding="{Binding Rate}" Width="80" />
+                                <DataGridTextColumn Header="Garments" Binding="{Binding GarmentCount}" Width="90" />
+                                <DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="90" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Button Content="Remove Selected Batch" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="RemoveBatchButton_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Order details -->
+                <Border x:Name="DetailsCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="ORDER DETAILS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Due date" />
+                                <DatePicker x:Name="DueDatePicker" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Urgent level" />
+                                <ComboBox x:Name="UrgentLevelBox" DisplayMemberPath="LevelName" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Discount type" />
+                                <ComboBox x:Name="DiscountTypeBox" SelectedIndex="0">
+                                    <ComboBoxItem Content="Percent" /><ComboBoxItem Content="Flat" />
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Discount value" />
+                                <TextBox x:Name="DiscountValueBox" Text="0" TextChanged="DiscountValueBox_TextChanged" />
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox x:Name="HomeDeliveryBox" Content="Home delivery" Margin="0,0,0,10" Checked="HomeDeliveryBox_CheckedChanged" Unchecked="HomeDeliveryBox_CheckedChanged" />
+                        <StackPanel x:Name="DeliveryChargePanel" Width="150" HorizontalAlignment="Left" Margin="0,0,0,10" Visibility="Collapsed">
+                            <Label Content="Delivery charge" />
+                            <TextBox x:Name="DeliveryChargeBox" Text="0" />
+                        </StackPanel>
+
+                        <Label Content="Notes" />
+                        <TextBox x:Name="NotesBox" AcceptsReturn="True" Height="60" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

@@ -24,12 +24,15 @@ public partial class WorkshopView : UserControl
     {
         ErrorBanner.Visibility = Visibility.Collapsed;
         var previouslySelectedWorkshopId = (WorkshopBox.SelectedItem as WorkshopOption)?.Id;
+        var previouslySelectedLaundryWorkshopId = (LaundryWorkshopBox.SelectedItem as WorkshopOption)?.Id;
         try
         {
             var queue = await _api.GetWorkshopQueueAsync(_search, _statusFilter);
 
             PendingGrid.ItemsSource = queue.Piece.Items.Where(i => i.ItemStatus == "Pending").ToList();
             InProgressGrid.ItemsSource = queue.Piece.Items.Where(i => i.ItemStatus != "Pending").ToList();
+            LaundryPendingGrid.ItemsSource = queue.LaundryPending;
+            LaundryInProgressGrid.ItemsSource = queue.LaundryInProgress;
             AcceptGrid.ItemsSource = queue.AcceptQueue;
             ReturnGrid.ItemsSource = queue.ReturnQueue;
             StoreReceiveGrid.ItemsSource = queue.StoreReceiveQueue;
@@ -37,6 +40,10 @@ public partial class WorkshopView : UserControl
             WorkshopBox.ItemsSource = queue.Workshops;
             var restoreIndex = previouslySelectedWorkshopId is null ? -1 : queue.Workshops.FindIndex(w => w.Id == previouslySelectedWorkshopId);
             WorkshopBox.SelectedIndex = restoreIndex >= 0 ? restoreIndex : (queue.Workshops.Count > 0 ? 0 : -1);
+
+            LaundryWorkshopBox.ItemsSource = queue.Workshops;
+            var restoreLaundryIndex = previouslySelectedLaundryWorkshopId is null ? -1 : queue.Workshops.FindIndex(w => w.Id == previouslySelectedLaundryWorkshopId);
+            LaundryWorkshopBox.SelectedIndex = restoreLaundryIndex >= 0 ? restoreLaundryIndex : (queue.Workshops.Count > 0 ? 0 : -1);
         }
         catch (ApiException ex)
         {
@@ -92,6 +99,42 @@ public partial class WorkshopView : UserControl
     {
         if (InProgressGrid.SelectedItem is not WorkshopPieceItem item || item.WorkshopItemId is null) return;
         var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.ItemStatus, item.CurrentStatus)
+        {
+            Owner = Window.GetWindow(this),
+        };
+        dialog.ShowDialog();
+        await LoadAsync();
+    }
+
+    private async void SendLaundryToWorkshopButton_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = LaundryPendingGrid.SelectedItems.Cast<WorkshopLaundryItem>().ToList();
+        if (selected.Count == 0) { ShowError("Select at least one garment to send."); return; }
+        if (LaundryWorkshopBox.SelectedItem is not WorkshopOption workshop) { ShowError("Select a workshop."); return; }
+
+        ErrorBanner.Visibility = Visibility.Collapsed;
+        try
+        {
+            var result = await _api.CreateLaundryChallanAsync(new CreateLaundryChallanRequest
+            {
+                WorkshopId = workshop.Id,
+                LaundryGarmentIds = selected.Select(i => i.LaundryGarmentId).ToList(),
+                Remarks = LaundrySendRemarksBox.Text.Trim(),
+            });
+            MessageBox.Show(Window.GetWindow(this), result.Message ?? "Sent to workshop.", "Sent", MessageBoxButton.OK, MessageBoxImage.Information);
+            LaundrySendRemarksBox.Text = "";
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            ShowError($"Could not send to workshop: {ex.Message}");
+        }
+    }
+
+    private async void LaundryInProgressGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (LaundryInProgressGrid.SelectedItem is not WorkshopLaundryItem item || item.WorkshopItemId is null) return;
+        var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.Status, item.CurrentStatus)
         {
             Owner = Window.GetWindow(this),
         };

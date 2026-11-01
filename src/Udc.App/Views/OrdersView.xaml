@@ -9,7 +9,10 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Orders" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Content="+ New Order" Style="{StaticResource PrimaryButton}" Click="NewOrderButton_Click" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="+ New Laundry Order" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="NewLaundryOrderButton_Click" />
+                <Button Content="+ New Order" Style="{StaticResource PrimaryButton}" Click="NewOrderButton_Click" />
+            </StackPanel>
         </Grid>
 
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">

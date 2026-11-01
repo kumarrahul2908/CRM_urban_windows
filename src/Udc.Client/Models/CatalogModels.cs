@@ -65,6 +65,13 @@ public sealed class ProductsResult
     [JsonPropertyName("garments")]
     public List<ProductGarment> Garments { get; set; } = new();
 
+    /// <summary>Weight-priced, garment-independent services (e.g. "Wash &amp; Fold") already
+    /// resolved for this price list - the rate picker for Per-Weight (Laundry) order creation.
+    /// Only entries with a configured <see cref="ProductRate.WeightRate"/> are included (see
+    /// src/services/catalog.ts listProductsWithRates()).</summary>
+    [JsonPropertyName("universal_services")]
+    public List<ProductRate> UniversalServices { get; set; } = new();
+
     [JsonPropertyName("total")]
     public int Total { get; set; }
 }
@@ -204,6 +211,96 @@ public sealed class CreateOrderResult
 
     [JsonPropertyName("invoice_number")]
     public string? InvoiceNumber { get; set; }
+
+    [JsonPropertyName("grand_total")]
+    public decimal GrandTotal { get; set; }
+
+    [JsonPropertyName("warnings")]
+    public List<string> Warnings { get; set; } = new();
+}
+
+// ---- Per-Weight (Laundry) order creation --------------------------------------------------
+
+/// <summary>One garment being tagged, inside a <see cref="CreateLaundryBatchLine"/>.</summary>
+public sealed class LaundryBatchGarmentLine
+{
+    [JsonPropertyName("garment_id")]
+    public int GarmentId { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public int Quantity { get; set; }
+}
+
+/// <summary>One line of <c>POST /api/mobile/laundry_orders_create</c>'s <c>batches</c> array -
+/// one weight-priced service (e.g. "Wash &amp; Fold") plus the individual garments tagged into
+/// it. <see cref="GarmentCount"/> must equal the sum of <see cref="Garments"/>' quantities (see
+/// OrderService.createLaundryOrder()) - the app always computes it that way, so a mismatch can't
+/// happen from this client. Unlike pos_orders_create, this endpoint does not re-resolve
+/// <see cref="Rate"/> server-side - it trusts whatever the client sends, so the app always fills
+/// it from the price list's own resolved rate (<c>products</c>' <c>universal_services</c>) rather
+/// than letting it be typed in.</summary>
+public sealed class CreateLaundryBatchLine
+{
+    [JsonPropertyName("service_id")]
+    public int ServiceId { get; set; }
+
+    [JsonPropertyName("weight")]
+    public decimal Weight { get; set; }
+
+    [JsonPropertyName("rate")]
+    public decimal Rate { get; set; }
+
+    [JsonPropertyName("garment_count")]
+    public int GarmentCount { get; set; }
+
+    [JsonPropertyName("garments")]
+    public List<LaundryBatchGarmentLine> Garments { get; set; } = new();
+}
+
+/// <summary>Body for <c>POST /api/mobile/laundry_orders_create</c> (Per-Weight order creation).
+/// No store_id field: unlike pos_orders_create, this endpoint never reads one from the payload -
+/// it always resolves the signed-in user's own fixed store and fails for a floating-store account
+/// (see README's Known gaps).</summary>
+public sealed class CreateLaundryOrderRequest
+{
+    [JsonPropertyName("client_request_id")]
+    public string ClientRequestId { get; set; } = "";
+
+    [JsonPropertyName("customer_id")]
+    public int CustomerId { get; set; }
+
+    [JsonPropertyName("batches")]
+    public List<CreateLaundryBatchLine> Batches { get; set; } = new();
+
+    [JsonPropertyName("urgent_level_id")]
+    public int? UrgentLevelId { get; set; }
+
+    [JsonPropertyName("discount_type")]
+    public string DiscountType { get; set; } = "Percent";
+
+    [JsonPropertyName("discount_value")]
+    public decimal DiscountValue { get; set; }
+
+    [JsonPropertyName("home_delivery")]
+    public bool HomeDelivery { get; set; }
+
+    [JsonPropertyName("delivery_charge")]
+    public decimal DeliveryCharge { get; set; }
+
+    [JsonPropertyName("notes")]
+    public string Notes { get; set; } = "";
+
+    [JsonPropertyName("due_date")]
+    public string? DueDate { get; set; }
+}
+
+public sealed class CreateLaundryOrderResult
+{
+    [JsonPropertyName("order_id")]
+    public int OrderId { get; set; }
+
+    [JsonPropertyName("order_number")]
+    public string? OrderNumber { get; set; }
 
     [JsonPropertyName("grand_total")]
     public decimal GrandTotal { get; set; }

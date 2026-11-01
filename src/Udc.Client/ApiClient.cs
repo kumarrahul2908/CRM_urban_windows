@@ -139,6 +139,9 @@ public sealed class ApiClient : IDisposable
     public Task<CreateOrderResult> CreateOrderAsync(CreateOrderRequest request, CancellationToken ct = default) =>
         SendAsync<CreateOrderResult>(HttpMethod.Post, "/api/mobile/pos_orders_create", request, ct);
 
+    public Task<CreateLaundryOrderResult> CreateLaundryOrderAsync(CreateLaundryOrderRequest request, CancellationToken ct = default) =>
+        SendAsync<CreateLaundryOrderResult>(HttpMethod.Post, "/api/mobile/laundry_orders_create", request, ct);
+
     // ---- workshop -------------------------------------------------------------------------------
 
     public Task<WorkshopQueueResult> GetWorkshopQueueAsync(string order = "", string status = "", int page = 1, CancellationToken ct = default) =>
@@ -148,6 +151,9 @@ public sealed class ApiClient : IDisposable
         SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
 
     public Task<WorkshopActionResult> CreateChallanAsync(CreateChallanRequest request, CancellationToken ct = default) =>
+        SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
+
+    public Task<WorkshopActionResult> CreateLaundryChallanAsync(CreateLaundryChallanRequest request, CancellationToken ct = default) =>
         SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
 
     // ---- barcode --------------------------------------------------------------------------------

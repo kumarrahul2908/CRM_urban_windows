@@ -78,4 +78,10 @@ public partial class OrdersView : UserControl
         var form = new NewOrderWindow(_api) { Owner = Window.GetWindow(this) };
         if (form.ShowDialog() == true) await LoadAsync();
     }
+
+    private async void NewLaundryOrderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var form = new NewLaundryOrderWindow(_api) { Owner = Window.GetWindow(this) };
+        if (form.ShowDialog() == true) await LoadAsync();
+    }
 }

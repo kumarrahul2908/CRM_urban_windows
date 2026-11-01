@@ -97,8 +97,52 @@ public sealed class WorkshopOption
     public string Name { get; set; } = "";
 }
 
-/// <summary><c>GET /api/mobile/workshop_queue</c>. Laundry (per-weight) lists aren't modeled
-/// here yet - this app's workshop screen covers piece items only (see README's Known gaps).</summary>
+/// <summary>One row of <c>workshop_queue</c>'s <c>laundry_pending</c>/<c>laundry_in_progress</c> -
+/// an individual tagged garment inside a Per-Weight batch (see
+/// LaundryGarmentService.listByStatus()). <see cref="WorkshopItemId"/> is null for a pending
+/// garment that hasn't been sent to a workshop yet - once sent, the SAME workshop_item_id-based
+/// actions the piece queues use (accept/return/receive/etc, via WorkshopItemActionsWindow) apply
+/// here too, since workshop_action's item actions don't distinguish piece from laundry.</summary>
+public sealed class WorkshopLaundryItem
+{
+    [JsonPropertyName("laundry_garment_id")]
+    public int LaundryGarmentId { get; set; }
+
+    [JsonPropertyName("sequence")]
+    public int Sequence { get; set; }
+
+    [JsonPropertyName("garment_name")]
+    public string? GarmentName { get; set; }
+
+    [JsonPropertyName("total_garments")]
+    public int TotalGarments { get; set; }
+
+    [JsonPropertyName("order_id")]
+    public int OrderId { get; set; }
+
+    [JsonPropertyName("order_number")]
+    public string? OrderNumber { get; set; }
+
+    [JsonPropertyName("due_date")]
+    public string? DueDate { get; set; }
+
+    [JsonPropertyName("customer_name")]
+    public string? CustomerName { get; set; }
+
+    [JsonPropertyName("service_name")]
+    public string? ServiceName { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = "";
+
+    [JsonPropertyName("current_status")]
+    public string? CurrentStatus { get; set; }
+
+    [JsonPropertyName("workshop_item_id")]
+    public int? WorkshopItemId { get; set; }
+}
+
+/// <summary><c>GET /api/mobile/workshop_queue</c>.</summary>
 public sealed class WorkshopQueueResult
 {
     [JsonPropertyName("can_create_challan")]
@@ -106,6 +150,12 @@ public sealed class WorkshopQueueResult
 
     [JsonPropertyName("piece")]
     public WorkshopPieceQueue Piece { get; set; } = new();
+
+    [JsonPropertyName("laundry_pending")]
+    public List<WorkshopLaundryItem> LaundryPending { get; set; } = new();
+
+    [JsonPropertyName("laundry_in_progress")]
+    public List<WorkshopLaundryItem> LaundryInProgress { get; set; } = new();
 
     [JsonPropertyName("accept_queue")]
     public List<WorkshopActionQueueItem> AcceptQueue { get; set; } = new();
@@ -147,6 +197,23 @@ public sealed class CreateChallanRequest
 
     [JsonPropertyName("item_ids")]
     public List<int> ItemIds { get; set; } = new();
+
+    [JsonPropertyName("remarks")]
+    public string Remarks { get; set; } = "";
+}
+
+/// <summary>Body for <c>POST /api/mobile/workshop_action</c> with action=create_laundry_challan
+/// (send selected Pending Per-Weight garments to a workshop).</summary>
+public sealed class CreateLaundryChallanRequest
+{
+    [JsonPropertyName("action")]
+    public string Action { get; set; } = "create_laundry_challan";
+
+    [JsonPropertyName("workshop_id")]
+    public int WorkshopId { get; set; }
+
+    [JsonPropertyName("laundry_garment_ids")]
+    public List<int> LaundryGarmentIds { get; set; } = new();
 
     [JsonPropertyName("remarks")]
     public string Remarks { get; set; } = "";
