@@ -1,0 +1,51 @@
+<Window x:Class="Udc.App.Views.WorkshopItemActionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Workshop Item"
+        Height="620" Width="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BgBrush}">
+    <DockPanel Margin="24">
+        <TextBlock DockPanel.Dock="Top" x:Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,2" />
+        <TextBlock DockPanel.Dock="Top" x:Name="SubtitleText" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,16" />
+
+        <Button DockPanel.Dock="Bottom" Content="Close" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Margin="0,16,0,0" Click="CloseButton_Click" />
+
+        <Border x:Name="StatusBanner" DockPanel.Dock="Top" CornerRadius="8" Padding="12,10" Margin="0,0,0,12" Visibility="Collapsed">
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Label Content="Remarks (required for Mark Unprocessed, optional otherwise)" />
+                <TextBox x:Name="RemarksBox" Margin="0,0,0,16" />
+
+                <TextBlock Text="WORKSHOP PROCESSING" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <UniformGrid Columns="2" Margin="0,0,0,16">
+                    <Button Content="Start Processing" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="start_processing" />
+                    <Button Content="Complete Washing &#8594; QC" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_washing" />
+                    <Button Content="Pass QC &#8594; Ready" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="pass_qc" />
+                    <Button Content="Complete Ironing &#8594; Packed" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_ironing" />
+                </UniformGrid>
+
+                <TextBlock Text="COMPLETION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <Button Content="Complete Processing (workshop done)" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,0,0,16" Click="ActionButton_Click" Tag="complete_processing" />
+
+                <TextBlock Text="RETURN FLOW" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <UniformGrid Columns="2" Margin="0,0,0,16">
+                    <Button Content="Accept" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="accept" />
+                    <Button Content="Return to Store" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="return_to_store" />
+                    <Button Content="Store Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="store_receive" />
+                    <Button Content="Force Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="force_receive" />
+                </UniformGrid>
+
+                <TextBlock Text="EXCEPTIONS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <UniformGrid Columns="2">
+                    <Button Content="Mark Unprocessed" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Click="ActionButton_Click" Tag="mark_unprocessed" />
+                    <Button Content="Resolve Unprocessed" Style="{StaticResource SecondaryButton}" Click="ActionButton_Click" Tag="resolve_unprocessed" />
+                </UniformGrid>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

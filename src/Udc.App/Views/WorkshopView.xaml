@@ -1,0 +1,142 @@
+<UserControl x:Class="Udc.App.Views.WorkshopView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgBrush}">
+    <DockPanel Margin="24">
+        <TextBlock DockPanel.Dock="Top" Text="Workshop" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,16" />
+
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="SearchBox" KeyDown="SearchBox_KeyDown" />
+                <ComboBox Grid.Column="2" x:Name="StatusFilterBox" SelectedIndex="0" SelectionChanged="StatusFilterBox_SelectionChanged">
+                    <ComboBoxItem Content="All statuses" />
+                    <ComboBoxItem Content="Pending" />
+                    <ComboBoxItem Content="Workshop" />
+                    <ComboBoxItem Content="Processing" />
+                </ComboBox>
+                <Button Grid.Column="4" Content="Search" Style="{StaticResource SecondaryButton}" Click="SearchButton_Click" />
+            </Grid>
+        </StackPanel>
+
+        <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- Ready to send -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="READY TO SEND TO WORKSHOP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="PendingGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Extended" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="160" Margin="0,0,0,10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                                <DataGridTextColumn Header="Service" Binding="{Binding ServiceName}" Width="2*" />
+                                <DataGridTextColumn Header="Due" Binding="{Binding DueDate}" Width="*" />
+                                <DataGridTextColumn Header="Urgent" Binding="{Binding UrgentLevelName}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="Select one or more rows (click, Ctrl+click, or Shift+click), choose a workshop, then send." FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" x:Name="WorkshopBox" DisplayMemberPath="Name" />
+                            <TextBox Grid.Column="2" x:Name="SendRemarksBox" />
+                            <Button Grid.Column="4" Content="Send to Workshop" Style="{StaticResource PrimaryButton}" Click="SendToWorkshopButton_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- In progress -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="IN PROGRESS (double-click to manage)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="InProgressGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="180"
+                                  MouseDoubleClick="InProgressGrid_MouseDoubleClick">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                                <DataGridTextColumn Header="Item status" Binding="{Binding ItemStatus}" Width="*" />
+                                <DataGridTextColumn Header="Current status" Binding="{Binding CurrentStatus}" Width="*" />
+                                <DataGridTextColumn Header="Challan" Binding="{Binding ChallanNumber}" Width="90" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Accept / Return / Store receive -->
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="ACCEPT QUEUE (workshop confirms receipt)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="AcceptGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="110" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Button Content="Accept Selected" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="AcceptButton_Click" />
+                    </StackPanel>
+                </Border>
+
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="RETURN TO STORE QUEUE (workshop has finished)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="ReturnGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="110" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Button Content="Return to Store" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Click="ReturnButton_Click" />
+                    </StackPanel>
+                </Border>
+
+                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="STORE RECEIVE QUEUE (confirm the garment is back)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <DataGrid x:Name="StoreReceiveGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="110" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                                <DataGridTextColumn Header="Current status" Binding="{Binding CurrentStatus}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Store Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="StoreReceiveButton_Click" />
+                            <Button Content="Force Receive" Style="{StaticResource SecondaryButton}" Click="ForceReceiveButton_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

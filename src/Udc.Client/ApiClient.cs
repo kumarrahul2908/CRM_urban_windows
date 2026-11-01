@@ -139,5 +139,21 @@ public sealed class ApiClient : IDisposable
     public Task<CreateOrderResult> CreateOrderAsync(CreateOrderRequest request, CancellationToken ct = default) =>
         SendAsync<CreateOrderResult>(HttpMethod.Post, "/api/mobile/pos_orders_create", request, ct);
 
+    // ---- workshop -------------------------------------------------------------------------------
+
+    public Task<WorkshopQueueResult> GetWorkshopQueueAsync(string order = "", string status = "", int page = 1, CancellationToken ct = default) =>
+        SendAsync<WorkshopQueueResult>(HttpMethod.Get, "/api/mobile/workshop_queue" + BuildQuery(("order", order), ("status", status), ("page", page.ToString())), null, ct);
+
+    public Task<WorkshopActionResult> SendWorkshopItemActionAsync(WorkshopItemActionRequest request, CancellationToken ct = default) =>
+        SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
+
+    public Task<WorkshopActionResult> CreateChallanAsync(CreateChallanRequest request, CancellationToken ct = default) =>
+        SendAsync<WorkshopActionResult>(HttpMethod.Post, "/api/mobile/workshop_action", request, ct);
+
+    // ---- barcode --------------------------------------------------------------------------------
+
+    public Task<BarcodeLookupResult> LookupBarcodeAsync(string barcode, CancellationToken ct = default) =>
+        SendAsync<BarcodeLookupResult>(HttpMethod.Get, "/api/mobile/barcode_lookup" + BuildQuery(("barcode", barcode)), null, ct);
+
     public void Dispose() => _http.Dispose();
 }

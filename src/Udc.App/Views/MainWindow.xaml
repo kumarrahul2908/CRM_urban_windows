@@ -39,7 +39,12 @@
                 <Border x:Name="NavOrders" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavOrders_Click">
                     <TextBlock x:Name="NavOrdersText" Text="Orders" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
                 </Border>
-                <TextBlock Text="Workshop" Foreground="#5E6E93" Padding="20,10,0,10" />
+                <Border x:Name="NavWorkshop" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavWorkshop_Click">
+                    <TextBlock x:Name="NavWorkshopText" Text="Workshop" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
+                </Border>
+                <Border x:Name="NavBarcode" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavBarcode_Click">
+                    <TextBlock x:Name="NavBarcodeText" Text="Barcode" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
+                </Border>
                 <TextBlock Text="Payments" Foreground="#5E6E93" Padding="20,10,0,10" />
                 <TextBlock Text="Reports" Foreground="#5E6E93" Padding="20,10,0,10" />
                 <TextBlock Text="Admin" Foreground="#5E6E93" Padding="20,10,0,10" />

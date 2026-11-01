@@ -74,6 +74,8 @@ public partial class MainWindow : Window
     private void NavDashboard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowDashboard();
     private void NavCustomers_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowCustomers();
     private void NavOrders_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowOrders();
+    private void NavWorkshop_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowWorkshop();
+    private void NavBarcode_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowBarcode();
 
     private void ShowDashboard()
     {
@@ -93,9 +95,25 @@ public partial class MainWindow : Window
         ContentArea.Content = new OrdersView(_api);
     }
 
+    private void ShowWorkshop()
+    {
+        SelectNav(NavWorkshop);
+        ContentArea.Content = new WorkshopView(_api);
+    }
+
+    private void ShowBarcode()
+    {
+        SelectNav(NavBarcode);
+        ContentArea.Content = new BarcodeLookupView(_api);
+    }
+
     private void SelectNav(Border active)
     {
-        foreach (var (border, text) in new[] { (NavDashboard, NavDashboardText), (NavCustomers, NavCustomersText), (NavOrders, NavOrdersText) })
+        foreach (var (border, text) in new[]
+                 {
+                     (NavDashboard, NavDashboardText), (NavCustomers, NavCustomersText), (NavOrders, NavOrdersText),
+                     (NavWorkshop, NavWorkshopText), (NavBarcode, NavBarcodeText),
+                 })
         {
             var isActive = border == active;
             border.Background = isActive ? new SolidColorBrush(Color.FromRgb(0x12, 0x32, 0x5E)) : Brushes.Transparent;
