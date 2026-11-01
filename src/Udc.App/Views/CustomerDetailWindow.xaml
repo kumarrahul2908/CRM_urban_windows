@@ -9,7 +9,11 @@
         <TextBlock DockPanel.Dock="Top" x:Name="TitleText" FontSize="19" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,2" />
         <TextBlock DockPanel.Dock="Top" x:Name="CodeText" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,16" />
 
-        <Button DockPanel.Dock="Bottom" Content="Close" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Margin="0,16,0,0" Click="CloseButton_Click" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="History" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="HistoryButton_Click" />
+            <Button Content="Edit" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="EditButton_Click" />
+            <Button Content="Close" Style="{StaticResource SecondaryButton}" Click="CloseButton_Click" />
+        </StackPanel>
 
         <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,12" Visibility="Collapsed">
             <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />

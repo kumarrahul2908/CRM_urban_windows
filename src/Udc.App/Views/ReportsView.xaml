@@ -8,7 +8,9 @@
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,16">
             <Button x:Name="TabSummary" Content="Summary" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="TabSummary_Click" />
             <Button x:Name="TabOutstanding" Content="Outstanding" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="TabOutstanding_Click" />
-            <Button x:Name="TabDailyCollection" Content="Daily Collection" Style="{StaticResource SecondaryButton}" Click="TabDailyCollection_Click" />
+            <Button x:Name="TabDailyCollection" Content="Daily Collection" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="TabDailyCollection_Click" />
+            <Button x:Name="TabDormant" Content="Dormant Customers" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="TabDormant_Click" />
+            <Button x:Name="TabAudit" Content="Audit Log" Style="{StaticResource SecondaryButton}" Click="TabAudit_Click" />
         </StackPanel>
 
         <ContentControl x:Name="SubContentArea" />

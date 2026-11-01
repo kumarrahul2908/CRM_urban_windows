@@ -69,12 +69,13 @@ public partial class CustomersView : UserControl
         if (form.ShowDialog() == true) _ = LoadAsync();
     }
 
-    private void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private async void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (CustomersGrid.SelectedItem is CustomerSummary selected)
         {
             var detail = new CustomerDetailWindow(_api, selected.Id) { Owner = Window.GetWindow(this) };
             detail.ShowDialog();
+            await LoadAsync(); // the customer may have been edited while the detail window was open
         }
     }
 }

@@ -10,6 +10,7 @@ public partial class CustomerDetailWindow : Window
 {
     private readonly ApiClient _api;
     private readonly int _customerId;
+    private string _customerName = "";
 
     public CustomerDetailWindow(ApiClient api, int customerId)
     {
@@ -28,7 +29,8 @@ public partial class CustomerDetailWindow : Window
         {
             var result = await _api.GetCustomerDetailAsync(_customerId);
             var c = result.Customer;
-            TitleText.Text = $"{c.Title} {c.FullName}".Trim();
+            _customerName = $"{c.Title} {c.FullName}".Trim();
+            TitleText.Text = _customerName;
             CodeText.Text = c.CustomerCode;
             WalletText.Text = Money(c.WalletBalance);
             OutstandingText.Text = Money(c.OutstandingBalance);
@@ -67,6 +69,18 @@ public partial class CustomerDetailWindow : Window
         row.Children.Add(labelText);
         row.Children.Add(valueText);
         FieldsPanel.Children.Add(row);
+    }
+
+    private async void EditButton_Click(object sender, RoutedEventArgs e)
+    {
+        var form = new CustomerFormWindow(_api, _customerId) { Owner = this };
+        if (form.ShowDialog() == true) await LoadAsync();
+    }
+
+    private void HistoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        var history = new CustomerHistoryWindow(_api, _customerId, _customerName) { Owner = this };
+        history.ShowDialog();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();

@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BgBrush}">
     <DockPanel Margin="24">
-        <TextBlock DockPanel.Dock="Top" Text="New Customer" FontSize="19" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,16" />
+        <TextBlock DockPanel.Dock="Top" x:Name="HeaderText" Text="New Customer" FontSize="19" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,16" />
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="CancelButton_Click" />
@@ -104,6 +104,7 @@
                 </Grid>
 
                 <CheckBox x:Name="HomeDeliveryBox" Content="Offers home delivery" Margin="0,0,0,10" />
+                <CheckBox x:Name="ActiveBox" Content="Active" IsChecked="True" Margin="0,0,0,10" Visibility="Collapsed" />
 
                 <StackPanel Margin="0,0,0,10">
                     <Label Content="Remarks" />

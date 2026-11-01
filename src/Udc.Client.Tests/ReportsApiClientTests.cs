@@ -1,5 +1,6 @@
 using System.Net;
 using Udc.Client;
+using Udc.Client.Models;
 using Xunit;
 
 namespace Udc.Client.Tests;
@@ -77,5 +78,58 @@ public class ReportsApiClientTests
         Assert.Equal(100m, result.AdvanceReceived);
         Assert.Single(result.Details);
         Assert.Equal("Cash: 900", result.Details[0].Breakdown);
+    }
+
+    [Fact]
+    public async Task GetAuditLogsAsync_ParsesEntriesAndOptions()
+    {
+        var body = """
+        {"success":true,"data":{
+          "entries":[{"id":1,"created_at":"2026-11-01 10:00:00","actor":"Admin","module":"orders","action":"create",
+            "record_id":"55","old_value":null,"new_value":"{\"order_number\":\"ST-0055\"}","ip_address":"[REDACTED]"}],
+          "page":1,"per_page":25,"total":1,
+          "options":{"modules":["orders","customers"],"actions":["create","edit"]}}}
+        """;
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.GetAuditLogsAsync(module: "orders");
+
+        Assert.Single(result.Entries);
+        Assert.Equal("Admin", result.Entries[0].Actor);
+        Assert.NotNull(result.Options);
+        Assert.Contains("customers", result.Options!.Modules);
+        Assert.Equal("?module=orders&page=1&options=1", handler.LastRequest!.RequestUri!.Query);
+    }
+
+    [Fact]
+    public async Task GetAuditLogsAsync_Forbidden_ThrowsWithServerMessage()
+    {
+        var body = """{"success":false,"error":{"code":"forbidden","message":"Only Super Admin and Admin can view the audit log."}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.Forbidden, body));
+
+        var ex = await Assert.ThrowsAsync<ApiException>(() => client.GetAuditLogsAsync());
+
+        Assert.Equal("forbidden", ex.Code);
+    }
+
+    [Fact]
+    public async Task GetDormantCustomersAsync_ParsesCustomersAndThresholds()
+    {
+        var body = """
+        {"success":true,"data":{
+          "customers":[{"id":3,"full_name":"Old Customer","mobile":"9222222222","communication_preference":"SMS",
+            "last_order_date":"2026-08-01","days_inactive":92}],
+          "min_days":30,"max_days":null}}
+        """;
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.GetDormantCustomersAsync(60);
+
+        Assert.Single(result.Customers);
+        Assert.Equal(92, result.Customers[0].DaysInactive);
+        Assert.Equal(30, result.MinDays);
+        Assert.Equal("?min_days=60", handler.LastRequest!.RequestUri!.Query);
     }
 }

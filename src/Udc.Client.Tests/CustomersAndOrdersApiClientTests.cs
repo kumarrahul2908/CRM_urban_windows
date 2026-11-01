@@ -70,6 +70,61 @@ public class CustomersAndOrdersApiClientTests
     }
 
     [Fact]
+    public async Task GetCustomerEditDetailAsync_ParsesEditableFields()
+    {
+        var body = """
+        {"success":true,"data":{"customer":{"id":7,"title":"Mr","full_name":"Ravi Kumar","mobile":"9111111111",
+          "alt_mobile":"","email":"","address":"","area":"","city":"","state":"MH","pincode":"",
+          "membership_id":"","birthday":"","anniversary":"","remarks":"","home_delivery":false,
+          "marketing_source":"","registration_source":"Counter","discount_percent":5,"price_list_id":3,
+          "communication_preference":"SMS","gstin":"","referral_code":"","is_active":true}}}
+        """;
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var result = await client.GetCustomerEditDetailAsync(7);
+
+        Assert.Equal("Ravi Kumar", result.Customer.FullName);
+        Assert.Equal("MH", result.Customer.State);
+        Assert.Equal(3, result.Customer.PriceListId);
+        Assert.True(result.Customer.IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateCustomerAsync_SendsPayload_AndParsesResult()
+    {
+        var body = """{"success":true,"data":{"id":7,"message":"Customer updated."}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var result = await client.UpdateCustomerAsync(new UpdateCustomerRequest { Id = 7, FullName = "Ravi Kumar", Mobile = "9111111111" });
+
+        Assert.Equal("Customer updated.", result.Message);
+        Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
+        Assert.Equal("/api/mobile/customers_update", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task GetCustomerHistoryAsync_ParsesLedgerAndSubLists()
+    {
+        var body = """
+        {"success":true,"data":{"customer_id":7,"outstanding":100,"wallet_balance":50,
+          "orders":[{"id":55,"order_number":"ST-0055","order_date":"2026-10-01","grand_total":1200,"current_due":700,"order_mode":"piece","status_label":"Ready"}],
+          "payments":[{"id":9,"payment_number":"PMT-0009","payment_date":"2026-10-01","total_amount":500}],
+          "garments":[],"wallet":[],"deliveries":[],"feedback":[],
+          "ledger":[{"date":"2026-10-01","description":"Order ST-0055","debit":1200,"credit":0}]}}
+        """;
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var result = await client.GetCustomerHistoryAsync(7);
+
+        Assert.Equal(7, result.CustomerId);
+        Assert.Single(result.Orders);
+        Assert.Single(result.Payments);
+        Assert.Single(result.Ledger);
+        Assert.Equal(1200m, result.Ledger[0].Debit);
+    }
+
+    [Fact]
     public async Task GetOrdersAsync_ParsesListRows()
     {
         var body = """
@@ -142,5 +197,30 @@ public class CustomersAndOrdersApiClientTests
         Assert.Equal(200m, result.UpdatedDue);
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
         Assert.Equal("/api/mobile/orders_record_payment", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task RecordPaymentAsync_SendsMultiplePaymentLines_ForASplitPayment()
+    {
+        var body = """{"success":true,"data":{"payment_id":11,"payment_number":"PMT-0011","updated_due":0,"idempotent_replay":false}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var request = new RecordPaymentRequest
+        {
+            OrderId = 55,
+            ClientRequestId = "test-req-split-1",
+            PaymentLines = new List<PaymentLine>
+            {
+                new() { PaymentTypeId = 1, Amount = 300 },
+                new() { PaymentTypeId = 2, Amount = 200 },
+            },
+        };
+
+        var result = await client.RecordPaymentAsync(request);
+
+        Assert.Equal(2, request.PaymentLines.Count);
+        Assert.Equal(0m, result.UpdatedDue);
+        Assert.Equal("/api/mobile/orders_record_payment", handler.LastRequest!.RequestUri!.AbsolutePath);
     }
 }

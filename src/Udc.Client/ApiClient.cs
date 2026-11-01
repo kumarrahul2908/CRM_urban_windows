@@ -108,6 +108,15 @@ public sealed class ApiClient : IDisposable
     public Task<CreateCustomerResult> CreateCustomerAsync(CreateCustomerRequest request, CancellationToken ct = default) =>
         SendAsync<CreateCustomerResult>(HttpMethod.Post, "/api/mobile/customers_create", request, ct);
 
+    public Task<CustomerEditDetailResult> GetCustomerEditDetailAsync(int id, CancellationToken ct = default) =>
+        SendAsync<CustomerEditDetailResult>(HttpMethod.Get, "/api/mobile/customers_edit_detail" + BuildQuery(("id", id.ToString())), null, ct);
+
+    public Task<UpdateCustomerResult> UpdateCustomerAsync(UpdateCustomerRequest request, CancellationToken ct = default) =>
+        SendAsync<UpdateCustomerResult>(HttpMethod.Post, "/api/mobile/customers_update", request, ct);
+
+    public Task<CustomerHistoryResult> GetCustomerHistoryAsync(int customerId, CancellationToken ct = default) =>
+        SendAsync<CustomerHistoryResult>(HttpMethod.Get, "/api/mobile/customer_history" + BuildQuery(("id", customerId.ToString())), null, ct);
+
     // ---- orders --------------------------------------------------------------------------------
 
     public Task<OrderListResult> GetOrdersAsync(string search = "", int page = 1, CancellationToken ct = default) =>
@@ -171,6 +180,13 @@ public sealed class ApiClient : IDisposable
 
     public Task<DailyCollectionResult> GetDailyCollectionAsync(string date = "", CancellationToken ct = default) =>
         SendAsync<DailyCollectionResult>(HttpMethod.Get, "/api/mobile/daily_collection" + BuildQuery(("date", date)), null, ct);
+
+    public Task<AuditLogsResult> GetAuditLogsAsync(string module = "", string action = "", string dateFrom = "", string dateTo = "", int page = 1, CancellationToken ct = default) =>
+        SendAsync<AuditLogsResult>(HttpMethod.Get, "/api/mobile/audit_logs" + BuildQuery(
+            ("module", module), ("action", action), ("date_from", dateFrom), ("date_to", dateTo), ("page", page.ToString()), ("options", "1")), null, ct);
+
+    public Task<DormantCustomersResult> GetDormantCustomersAsync(int minDays = 30, CancellationToken ct = default) =>
+        SendAsync<DormantCustomersResult>(HttpMethod.Get, "/api/mobile/dormant_customers" + BuildQuery(("min_days", minDays.ToString())), null, ct);
 
     public void Dispose() => _http.Dispose();
 }

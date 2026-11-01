@@ -293,8 +293,9 @@ public sealed class PaymentTypesResult
     public List<PaymentTypeOption> PaymentTypes { get; set; } = new();
 }
 
-/// <summary>Body for <c>POST /api/mobile/orders_record_payment</c>. Phase 2 supports a single
-/// payment line (the common case) - multi-line split payments are a later-phase addition.</summary>
+/// <summary>Body for <c>POST /api/mobile/orders_record_payment</c>. Supports a split across
+/// several payment methods in one go via <see cref="PaymentLines"/> (<c>RecordPaymentWindow</c>
+/// lets the common single-method case stay a one-field fill-and-submit).</summary>
 public sealed class RecordPaymentRequest
 {
     [JsonPropertyName("order_id")]

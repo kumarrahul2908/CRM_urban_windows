@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Record Payment"
-        Height="360" Width="420"
+        Height="520" Width="440"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="{StaticResource BgBrush}">
@@ -20,12 +20,38 @@
         </Border>
 
         <StackPanel>
-            <Label Content="Payment method" />
-            <ComboBox x:Name="PaymentTypeBox" DisplayMemberPath="TypeName" Margin="0,0,0,12" />
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="10" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <Label Content="Payment method" />
+                    <ComboBox x:Name="PaymentTypeBox" DisplayMemberPath="TypeName" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <Label Content="Amount" />
+                    <TextBox x:Name="AmountBox" />
+                </StackPanel>
+                <StackPanel Grid.Column="4" VerticalAlignment="Bottom">
+                    <Button Content="Add Line" Style="{StaticResource SecondaryButton}" Click="AddLineButton_Click" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="A single payment: just fill this in and click Record Payment. A split payment across several methods: click Add Line for each method, then Record Payment." FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
 
-            <Label Content="Amount" />
-            <TextBox x:Name="AmountBox" Margin="0,0,0,4" />
-            <TextBlock Text="Leave at the full due amount, or enter a partial payment." FontSize="11" Foreground="{StaticResource MutedBrush}" />
+            <DataGrid x:Name="PaymentLinesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                      SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="120" Margin="0,0,0,8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Method" Binding="{Binding TypeName}" Width="2*" />
+                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <Button Content="Remove Selected Line" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,0,0,8" Click="RemoveLineButton_Click" />
+            <TextBlock x:Name="RemainingText" FontSize="12" Foreground="{StaticResource MutedBrush}" />
         </StackPanel>
     </DockPanel>
 </Window>

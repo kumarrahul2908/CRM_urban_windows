@@ -26,6 +26,7 @@ and then dropped in favor of this true native UI.
 | 5 Reports | `ReportsView` (tab strip over three sub-screens): **Summary** (`reports_summary` for a date range - sales/payments/customers/workshop operations, with by-service/top-garments/top-customers breakdowns), **Outstanding** (`outstanding_list` - ageing buckets, searchable, per-customer totals), **Daily Collection** (`daily_collection` - by payment method, with the day's payment list). "Admin" (users/roles/settings) turned out not to be achievable from this app at all - see Known gaps. | **done - confirmed green on CI** (run [#13](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41284803320), first try) |
 | 6 Packaging polish | **Done, confirmed on CI** (session persistence + background jobs: run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771); installer: run [#17](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41289531613)): session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab), and a real installer (`installer/setup.iss`, Inno Setup - produces `UrbanDryCleanCRM-Setup.exe` with Start Menu/optional desktop shortcuts, per-user install by default so a shop-counter standard account doesn't need an admin prompt). **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | **done** |
 | 7 Laundry (per-weight) mode | `NewLaundryOrderWindow`, opened from Orders ("+ New Laundry Order"): customer search/select (same as piece orders), a batch builder (one weight-priced service from `products`' new `universal_services` + a weight + the individual garments tagged into it), a batches cart, the same order details/estimate pattern as piece orders, submits to `laundry_orders_create`. `WorkshopView` gained Laundry "ready to send" (multi-select garments -> `create_laundry_challan`) and "in progress" queues from `workshop_queue`'s `laundry_pending`/`laundry_in_progress`; double-clicking an in-progress Laundry garment opens the same `WorkshopItemActionsWindow` piece items use (workshop_item_id-based actions don't distinguish piece from laundry server-side), so no new lifecycle UI was needed there. The Accept/Return/Store-Receive queues already mixed piece and laundry items server-side (a `kind` field), so they needed no client changes beyond a Type column. A floating-store account (no fixed store) cannot create a Laundry order at all - `laundry_orders_create` never reads a `store_id` from its payload, unlike `pos_orders_create` - see Known gaps. | **done - confirmed green on CI** (run [#19](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41299026929), first try) |
+| 8 CRM completeness | **Customer edit**: `CustomerFormWindow` now also handles edit (opened from Customer detail's new Edit button), loading `customers_edit_detail` and submitting to `customers_update` - fields the form doesn't show (State, Membership ID, Birthday, Anniversary, Marketing Source, Price List, GSTIN, Referral Code) are carried through unchanged from the loaded record rather than silently blanked, since the backend treats every field in the update payload as the new value. **Split payments**: `RecordPaymentWindow` can now add multiple payment-method lines (Add Line) for one payment, submitted together via `payment_lines[]` - a single fill-and-submit still works exactly as before for the common case. **New report screens**: `DormantCustomersView` (`dormant_customers`, min-days threshold) and `AuditLogView` (`audit_logs`, module/action/date filters, before/after diff panel - Super Admin/Admin only, same gating as Workshop) added as Reports tabs; `CustomerHistoryWindow` (`customer_history` - a combined ledger plus orders/payments/garments/wallet/deliveries/feedback, each its own tab) opened from Customer detail's new History button. | pending CI confirmation |
 
 ## Architecture
 
@@ -142,6 +143,18 @@ repo-wide `x:Name`-vs-code-behind cross-check in both directions, by-hand model-
 cross-check) paid off again - seven phases building successfully now, six of them green on the
 very first CI attempt.
 
+**Phase 8 (CRM completeness) is pending its first CI run.** `Udc.Client`'s new tests (54/54, up
+from 47) pass locally - `GetCustomerEditDetailAsync`/`UpdateCustomerAsync`, `RecordPaymentAsync`
+with multiple lines, `GetCustomerHistoryAsync`, `GetAuditLogsAsync`, `GetDormantCustomersAsync`.
+`CustomerFormWindow`'s edit mode, `RecordPaymentWindow`'s multi-line UI, `CustomerHistoryWindow`,
+`AuditLogView`, and `DormantCustomersView` are WPF-only and can't be compiled here. One extra risk
+this phase, beyond the usual XML/x:Name/model-property checks: `CustomerHistoryWindow` builds its
+`DataGrid` columns in code with plain string `Binding` paths (one `DataGrid` whose columns are
+rebuilt per tab, rather than seven near-identical XAML grids) - a typo there compiles fine and
+would only show up as a blank column at runtime, not a CI failure, so each path was hand-checked
+twice against its model (`CustomerHistoryOrder`/`Payment`/`Garment`/`WalletEntry`/`Delivery`/
+`Feedback`/`LedgerEntry`) rather than trusted on sight.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -215,9 +228,6 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
   resolved `universal_services` rate and never lets it be typed in, but this is a client-side
   safeguard only, not a server-enforced one - worth knowing if this API is ever called from
   anywhere else.
-- **Record Payment supports one payment line only** - the backend accepts a split across several
-  payment methods in one go (`payment_lines[]`); the UI only exposes a single method for now.
-- **No customer edit** - only create and view; `customers_update` isn't wired up yet.
 - **No workshop schedule, report, or billing screens** - `workshop_schedule`/`workshop_report`/
   `workshop_billing_*` aren't wired up; this phase covers day-to-day queue operations only.
 - **`WorkshopItemActionsWindow` shows all 11 lifecycle actions always**, rather than only the
@@ -235,9 +245,10 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
   scope for this client-only repo unless specifically asked for.
 - **WhatsApp admin (templates, analytics, marketing) has the same gap** - no mobile API surface
   for it either, same reasoning as Admin above.
-- **Audit log, customer order history, and the dormant-customers report aren't wired up** -
-  `audit_logs`, `customer_history`, and `dormant_customers` all exist and work, they're just not
-  built into a screen yet; good first candidates for a later phase.
+- **The Audit Log tab will 403 for most signed-in accounts, and that's correct, not a bug.**
+  `audit_logs` requires `audit.view` plus a Super Admin/Admin role check (see auditViewer.ts) -
+  ordinary counter-staff logins were never meant to see it, same gating as Workshop's
+  `workshop.manage`.
 - **No code signing, and this isn't something a later phase can just add.** It requires a
   code-signing certificate purchased from a CA (or a Microsoft Trusted Signing subscription),
   which only the business owner can buy - no amount of further coding here produces one. Without

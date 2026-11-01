@@ -310,3 +310,289 @@ public sealed class DailyCollectionResult
     [JsonPropertyName("details")]
     public List<CollectionDetail> Details { get; set; } = new();
 }
+
+// ---- audit_logs (Super Admin / Admin only - audit.view) ----------------------------------
+
+/// <summary>One row of <c>audit_logs</c>' <c>entries</c>. <see cref="OldValue"/>/<see cref="NewValue"/>
+/// are already redacted server-side (secrets/PII) before this app ever sees them - see
+/// auditViewer.ts's redactValue()/redactNode().</summary>
+public sealed class AuditLogEntry
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string? CreatedAt { get; set; }
+
+    [JsonPropertyName("actor")]
+    public string? Actor { get; set; }
+
+    [JsonPropertyName("module")]
+    public string? Module { get; set; }
+
+    [JsonPropertyName("action")]
+    public string? Action { get; set; }
+
+    [JsonPropertyName("record_id")]
+    public string? RecordId { get; set; }
+
+    [JsonPropertyName("old_value")]
+    public string? OldValue { get; set; }
+
+    [JsonPropertyName("new_value")]
+    public string? NewValue { get; set; }
+
+    [JsonPropertyName("ip_address")]
+    public string? IpAddress { get; set; }
+}
+
+public sealed class AuditLogOptions
+{
+    [JsonPropertyName("modules")]
+    public List<string> Modules { get; set; } = new();
+
+    [JsonPropertyName("actions")]
+    public List<string> Actions { get; set; } = new();
+}
+
+/// <summary><c>GET /api/mobile/audit_logs</c>. Only visible to Super Admin / Admin (audit.view +
+/// a role check) - most signed-in counter-staff accounts will get a 403 opening this screen,
+/// same as Workshop's workshop.manage gate.</summary>
+public sealed class AuditLogsResult
+{
+    [JsonPropertyName("entries")]
+    public List<AuditLogEntry> Entries { get; set; } = new();
+
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+
+    [JsonPropertyName("per_page")]
+    public int PerPage { get; set; }
+
+    [JsonPropertyName("total")]
+    public int Total { get; set; }
+
+    [JsonPropertyName("options")]
+    public AuditLogOptions? Options { get; set; }
+}
+
+// ---- customer_history ----------------------------------------------------------------------
+
+public sealed class CustomerHistoryOrder
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("order_number")]
+    public string? OrderNumber { get; set; }
+
+    [JsonPropertyName("order_date")]
+    public string? OrderDate { get; set; }
+
+    [JsonPropertyName("due_date")]
+    public string? DueDate { get; set; }
+
+    [JsonPropertyName("grand_total")]
+    public decimal GrandTotal { get; set; }
+
+    [JsonPropertyName("current_due")]
+    public decimal CurrentDue { get; set; }
+
+    [JsonPropertyName("order_mode")]
+    public string? OrderMode { get; set; }
+
+    [JsonPropertyName("status_label")]
+    public string? StatusLabel { get; set; }
+}
+
+public sealed class CustomerHistoryPayment
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("payment_number")]
+    public string? PaymentNumber { get; set; }
+
+    [JsonPropertyName("order_id")]
+    public int? OrderId { get; set; }
+
+    [JsonPropertyName("payment_date")]
+    public string? PaymentDate { get; set; }
+
+    [JsonPropertyName("payment_kind")]
+    public string? PaymentKind { get; set; }
+
+    [JsonPropertyName("total_amount")]
+    public decimal TotalAmount { get; set; }
+
+    [JsonPropertyName("remarks")]
+    public string? Remarks { get; set; }
+}
+
+public sealed class CustomerHistoryGarment
+{
+    [JsonPropertyName("garment_name")]
+    public string? GarmentName { get; set; }
+
+    [JsonPropertyName("service_name")]
+    public string? ServiceName { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public decimal? Quantity { get; set; }
+
+    [JsonPropertyName("rate")]
+    public decimal? Rate { get; set; }
+
+    [JsonPropertyName("weight")]
+    public decimal? Weight { get; set; }
+
+    [JsonPropertyName("order_date")]
+    public string? OrderDate { get; set; }
+
+    [JsonPropertyName("order_number")]
+    public string? OrderNumber { get; set; }
+}
+
+public sealed class CustomerHistoryWalletEntry
+{
+    [JsonPropertyName("created_at")]
+    public string? CreatedAt { get; set; }
+
+    [JsonPropertyName("txn_type")]
+    public string? TxnType { get; set; }
+
+    [JsonPropertyName("debit")]
+    public decimal Debit { get; set; }
+
+    [JsonPropertyName("credit")]
+    public decimal Credit { get; set; }
+
+    [JsonPropertyName("balance_after")]
+    public decimal BalanceAfter { get; set; }
+
+    [JsonPropertyName("remarks")]
+    public string? Remarks { get; set; }
+}
+
+public sealed class CustomerHistoryDelivery
+{
+    [JsonPropertyName("delivery_number")]
+    public string? DeliveryNumber { get; set; }
+
+    [JsonPropertyName("delivery_date")]
+    public string? DeliveryDate { get; set; }
+
+    [JsonPropertyName("time_slot")]
+    public string? TimeSlot { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("amount_due")]
+    public decimal AmountDue { get; set; }
+}
+
+public sealed class CustomerHistoryFeedback
+{
+    [JsonPropertyName("order_number")]
+    public string? OrderNumber { get; set; }
+
+    [JsonPropertyName("rating")]
+    public int? Rating { get; set; }
+
+    [JsonPropertyName("comments")]
+    public string? Comments { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("created_at")]
+    public string? CreatedAt { get; set; }
+}
+
+public sealed class CustomerHistoryLedgerEntry
+{
+    [JsonPropertyName("date")]
+    public string? Date { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("debit")]
+    public decimal Debit { get; set; }
+
+    [JsonPropertyName("credit")]
+    public decimal Credit { get; set; }
+}
+
+/// <summary><c>GET /api/mobile/customer_history</c> - everything about one customer in one call:
+/// a combined debit/credit ledger plus the underlying orders/payments/garments/wallet/deliveries/
+/// feedback lists it was built from (see reports.ts' customer_history route).</summary>
+public sealed class CustomerHistoryResult
+{
+    [JsonPropertyName("customer_id")]
+    public int CustomerId { get; set; }
+
+    [JsonPropertyName("outstanding")]
+    public decimal Outstanding { get; set; }
+
+    [JsonPropertyName("wallet_balance")]
+    public decimal WalletBalance { get; set; }
+
+    [JsonPropertyName("orders")]
+    public List<CustomerHistoryOrder> Orders { get; set; } = new();
+
+    [JsonPropertyName("payments")]
+    public List<CustomerHistoryPayment> Payments { get; set; } = new();
+
+    [JsonPropertyName("garments")]
+    public List<CustomerHistoryGarment> Garments { get; set; } = new();
+
+    [JsonPropertyName("wallet")]
+    public List<CustomerHistoryWalletEntry> Wallet { get; set; } = new();
+
+    [JsonPropertyName("deliveries")]
+    public List<CustomerHistoryDelivery> Deliveries { get; set; } = new();
+
+    [JsonPropertyName("feedback")]
+    public List<CustomerHistoryFeedback> Feedback { get; set; } = new();
+
+    [JsonPropertyName("ledger")]
+    public List<CustomerHistoryLedgerEntry> Ledger { get; set; } = new();
+}
+
+// ---- dormant_customers ----------------------------------------------------------------------
+
+public sealed class DormantCustomerRow
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("full_name")]
+    public string? FullName { get; set; }
+
+    [JsonPropertyName("mobile")]
+    public string? Mobile { get; set; }
+
+    [JsonPropertyName("communication_preference")]
+    public string? CommunicationPreference { get; set; }
+
+    [JsonPropertyName("last_order_date")]
+    public string? LastOrderDate { get; set; }
+
+    [JsonPropertyName("days_inactive")]
+    public int DaysInactive { get; set; }
+}
+
+/// <summary><c>GET /api/mobile/dormant_customers</c>.</summary>
+public sealed class DormantCustomersResult
+{
+    [JsonPropertyName("customers")]
+    public List<DormantCustomerRow> Customers { get; set; } = new();
+
+    [JsonPropertyName("min_days")]
+    public int MinDays { get; set; }
+
+    [JsonPropertyName("max_days")]
+    public int? MaxDays { get; set; }
+}
