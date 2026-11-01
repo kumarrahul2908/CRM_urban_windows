@@ -1,0 +1,16 @@
+<UserControl x:Class="Udc.App.Views.ReportsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgBrush}">
+    <DockPanel Margin="24">
+        <TextBlock DockPanel.Dock="Top" Text="Reports" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,16" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,16">
+            <Button x:Name="TabSummary" Content="Summary" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="TabSummary_Click" />
+            <Button x:Name="TabOutstanding" Content="Outstanding" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="TabOutstanding_Click" />
+            <Button x:Name="TabDailyCollection" Content="Daily Collection" Style="{StaticResource SecondaryButton}" Click="TabDailyCollection_Click" />
+        </StackPanel>
+
+        <ContentControl x:Name="SubContentArea" />
+    </DockPanel>
+</UserControl>

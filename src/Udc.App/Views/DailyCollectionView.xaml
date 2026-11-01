@@ -1,0 +1,68 @@
+<UserControl x:Class="Udc.App.Views.DailyCollectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgBrush}">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <Label Content="Date" />
+                <DatePicker x:Name="DatePickerBox" Width="160" SelectedDateChanged="DatePickerBox_SelectedDateChanged" />
+            </StackPanel>
+            <Button Grid.Column="2" Content="Load" Style="{StaticResource PrimaryButton}" VerticalAlignment="Bottom" Click="LoadButton_Click" />
+        </Grid>
+
+        <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+            <Border Background="{StaticResource PrimaryBrush}" CornerRadius="10" Padding="14,12" Margin="0,0,10,10" Width="170">
+                <StackPanel>
+                    <TextBlock Text="Net Collection" FontSize="11" Foreground="#CBD8F2" />
+                    <TextBlock x:Name="NetCollectionText" FontSize="18" FontWeight="Bold" Foreground="White" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,10,10" Width="170">
+                <StackPanel>
+                    <TextBlock Text="Collected" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock x:Name="TotalCollectedText" FontSize="18" FontWeight="Bold" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,10,10" Width="170">
+                <StackPanel>
+                    <TextBlock Text="Refunded" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock x:Name="TotalRefundedText" FontSize="18" FontWeight="Bold" Foreground="{StaticResource ErrorBrush}" />
+                </StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,10,10" Width="170">
+                <StackPanel>
+                    <TextBlock Text="Advance Received" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                    <TextBlock x:Name="AdvanceReceivedText" FontSize="18" FontWeight="Bold" />
+                </StackPanel>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock DockPanel.Dock="Top" Text="By payment method" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <StackPanel x:Name="ByMethodPanel" DockPanel.Dock="Top" Margin="0,0,0,16" />
+
+        <TextBlock DockPanel.Dock="Top" Text="Collections" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <DataGrid x:Name="DetailsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Payment #" Binding="{Binding PaymentNumber}" Width="110" />
+                <DataGridTextColumn Header="Order #" Binding="{Binding OrderNumber}" Width="100" />
+                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="2*" />
+                <DataGridTextColumn Header="Amount" Binding="{Binding TotalAmount}" Width="90" />
+                <DataGridTextColumn Header="Kind" Binding="{Binding PaymentKind}" Width="80" />
+                <DataGridTextColumn Header="Breakdown" Binding="{Binding Breakdown}" Width="2*" />
+                <DataGridTextColumn Header="By" Binding="{Binding CreatedByName}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

@@ -45,9 +45,10 @@
                 <Border x:Name="NavBarcode" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavBarcode_Click">
                     <TextBlock x:Name="NavBarcodeText" Text="Barcode" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
                 </Border>
+                <Border x:Name="NavReports" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavReports_Click">
+                    <TextBlock x:Name="NavReportsText" Text="Reports" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
+                </Border>
                 <TextBlock Text="Payments" Foreground="#5E6E93" Padding="20,10,0,10" />
-                <TextBlock Text="Reports" Foreground="#5E6E93" Padding="20,10,0,10" />
-                <TextBlock Text="Admin" Foreground="#5E6E93" Padding="20,10,0,10" />
                 <TextBlock Text="(coming in later phases)" Foreground="#44547A" FontStyle="Italic" FontSize="11" Padding="20,10,0,0" TextWrapping="Wrap" Width="170" HorizontalAlignment="Left" />
             </StackPanel>
         </Border>

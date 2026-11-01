@@ -155,5 +155,16 @@ public sealed class ApiClient : IDisposable
     public Task<BarcodeLookupResult> LookupBarcodeAsync(string barcode, CancellationToken ct = default) =>
         SendAsync<BarcodeLookupResult>(HttpMethod.Get, "/api/mobile/barcode_lookup" + BuildQuery(("barcode", barcode)), null, ct);
 
+    // ---- reports --------------------------------------------------------------------------------
+
+    public Task<ReportsSummaryResult> GetReportsSummaryAsync(string dateFrom = "", string dateTo = "", CancellationToken ct = default) =>
+        SendAsync<ReportsSummaryResult>(HttpMethod.Get, "/api/mobile/reports_summary" + BuildQuery(("date_from", dateFrom), ("date_to", dateTo)), null, ct);
+
+    public Task<OutstandingListResult> GetOutstandingListAsync(string customer = "", CancellationToken ct = default) =>
+        SendAsync<OutstandingListResult>(HttpMethod.Get, "/api/mobile/outstanding_list" + BuildQuery(("customer", customer)), null, ct);
+
+    public Task<DailyCollectionResult> GetDailyCollectionAsync(string date = "", CancellationToken ct = default) =>
+        SendAsync<DailyCollectionResult>(HttpMethod.Get, "/api/mobile/daily_collection" + BuildQuery(("date", date)), null, ct);
+
     public void Dispose() => _http.Dispose();
 }

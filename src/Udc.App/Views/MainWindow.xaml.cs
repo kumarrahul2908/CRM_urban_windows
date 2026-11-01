@@ -76,6 +76,7 @@ public partial class MainWindow : Window
     private void NavOrders_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowOrders();
     private void NavWorkshop_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowWorkshop();
     private void NavBarcode_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowBarcode();
+    private void NavReports_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowReports();
 
     private void ShowDashboard()
     {
@@ -107,12 +108,18 @@ public partial class MainWindow : Window
         ContentArea.Content = new BarcodeLookupView(_api);
     }
 
+    private void ShowReports()
+    {
+        SelectNav(NavReports);
+        ContentArea.Content = new ReportsView(_api);
+    }
+
     private void SelectNav(Border active)
     {
         foreach (var (border, text) in new[]
                  {
                      (NavDashboard, NavDashboardText), (NavCustomers, NavCustomersText), (NavOrders, NavOrdersText),
-                     (NavWorkshop, NavWorkshopText), (NavBarcode, NavBarcodeText),
+                     (NavWorkshop, NavWorkshopText), (NavBarcode, NavBarcodeText), (NavReports, NavReportsText),
                  })
         {
             var isActive = border == active;

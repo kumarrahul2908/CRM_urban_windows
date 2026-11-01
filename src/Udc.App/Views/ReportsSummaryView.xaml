@@ -1,0 +1,89 @@
+<UserControl x:Class="Udc.App.Views.ReportsSummaryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{StaticResource BgBrush}">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <Label Content="From" />
+                <DatePicker x:Name="FromDatePicker" Width="140" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <Label Content="To" />
+                <DatePicker x:Name="ToDatePicker" Width="140" />
+            </StackPanel>
+            <Button Grid.Column="4" Content="Load" Style="{StaticResource PrimaryButton}" VerticalAlignment="Bottom" Click="LoadButton_Click" />
+        </Grid>
+
+        <Border x:Name="ErrorBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,16" Visibility="Collapsed">
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="SALES" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <WrapPanel x:Name="SalesCardsPanel" Margin="0,0,0,12" />
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="By service" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <DataGrid x:Name="ByServiceGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="160">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Service" Binding="{Binding ServiceName}" Width="2*" />
+                                <DataGridTextColumn Header="Items" Binding="{Binding ItemCount}" Width="*" />
+                                <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Top garments" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <DataGrid x:Name="TopGarmentsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                                  BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="160">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Garment" Binding="{Binding GarmentName}" Width="2*" />
+                                <DataGridTextColumn Header="Items" Binding="{Binding ItemCount}" Width="*" />
+                                <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="PAYMENTS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <WrapPanel x:Name="PaymentsCardsPanel" Margin="0,0,0,20" />
+
+                <TextBlock Text="CUSTOMERS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <WrapPanel x:Name="CustomersCardsPanel" Margin="0,0,0,12" />
+                <DataGrid x:Name="TopCustomersGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" Background="White"
+                          BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="160" Margin="0,0,0,20">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Customer" Binding="{Binding FullName}" Width="2*" />
+                        <DataGridTextColumn Header="Mobile" Binding="{Binding Mobile}" Width="*" />
+                        <DataGridTextColumn Header="Orders" Binding="{Binding OrderCount}" Width="*" />
+                        <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue}" Width="*" />
+                        <DataGridTextColumn Header="Outstanding" Binding="{Binding Outstanding}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <TextBlock Text="WORKSHOP OPERATIONS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
+                <WrapPanel x:Name="OperationsCardsPanel" Margin="0,0,0,20" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
