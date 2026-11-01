@@ -58,7 +58,9 @@ const backendOut = path.join(targetDir, 'backend');
 
 function run(cmd, args, cwd) {
   console.log(redact(`[prepare-backend] $ ${cmd} ${args.join(' ')}  (in ${cwd})`));
-  execFileSync(cmd, args, { cwd, stdio: 'inherit' });
+  // npm/node on Windows resolve to .cmd/.bat shims; execFileSync needs shell:true to find them
+  // (CreateProcess, unlike cmd.exe, doesn't apply PATHEXT resolution on its own).
+  execFileSync(cmd, args, { cwd, stdio: 'inherit', shell: true });
 }
 
 function rmrf(p) {
