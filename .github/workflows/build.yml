@@ -23,6 +23,11 @@ jobs:
         run: dotnet publish src/Udc.App/Udc.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ${{ env.PUBLISH_DIR }}
 
       - name: Stage the backend (clone + build kumarrahul2908/urban-dry-clean-crm-node, bundle a portable Node.js runtime) next to Udc.App.exe
+        env:
+          # urban-dry-clean-crm-node is private - needs a token with read access.
+          # Repo secret, not this workflow's own GITHUB_TOKEN: that token is scoped only to this
+          # repo and cannot read a different one, even under the same account. See README.md.
+          BACKEND_REPO_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN }}
         run: node scripts/prepare-backend.cjs ${{ env.PUBLISH_DIR }}
 
       - uses: actions/upload-artifact@v4

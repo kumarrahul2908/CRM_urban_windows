@@ -105,24 +105,37 @@ build.
 
 ## Building
 
+### One-time setup: a token to read the backend repo
+`kumarrahul2908/urban-dry-clean-crm-node` is **private**, so CI's own `GITHUB_TOKEN` (scoped only
+to this repo) can't clone it, and an anonymous `git clone` fails outright. Add a repo secret
+named `BACKEND_REPO_TOKEN` here (Settings > Secrets and variables > Actions > New repository
+secret) holding a token with read access to that repo - a fine-grained PAT scoped to just
+`urban-dry-clean-crm-node` with "Contents: Read" is enough. Without it, the "Stage the backend"
+step fails with a git auth error.
+
 ### CI (recommended - works without a Windows machine)
 `.github/workflows/build.yml` tests `Udc.Client`, then publishes `Udc.App` self-contained for
 `win-x64` and stages the bundled backend (cloning and building
-`kumarrahul2908/urban-dry-clean-crm-node`) next to it, on a `windows-latest` runner. Trigger it
-from the Actions tab (needs this workflow file to exist on `main` first - GitHub only lists
-workflows that are present on the default branch) or push to `main`. Download the
-`urban-dry-clean-crm-native-win-x64` artifact, unzip it, and run `Udc.App.exe` - no installer yet
-(that's Phase 5); for now this published folder *is* the app.
+`kumarrahul2908/urban-dry-clean-crm-node`, using the `BACKEND_REPO_TOKEN` secret above) next to
+it, on a `windows-latest` runner. Trigger it from the Actions tab (needs this workflow file to
+exist on `main` first - GitHub only lists workflows that are present on the default branch) or
+push to `main`. Download the `urban-dry-clean-crm-native-win-x64` artifact, unzip it, and run
+`Udc.App.exe` - no installer yet (that's Phase 5); for now this published folder *is* the app.
 
 ### Locally, on Windows
+`urban-dry-clean-crm-node` is private, so the clone needs a token too - use a
+[personal access token](https://github.com/settings/tokens) with read access to it (same kind as
+`BACKEND_REPO_TOKEN` in CI), or use `BACKEND_LOCAL_PATH` instead (see below) if you already have
+it checked out locally.
 ```powershell
 dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 dotnet publish src/Udc.App/Udc.App.csproj -c Release -r win-x64 --self-contained true -o publish/win-x64
+$env:BACKEND_REPO_TOKEN = "<your PAT>"
 node scripts/prepare-backend.cjs publish/win-x64
 # run publish/win-x64/Udc.App.exe
 ```
 To build against a local backend checkout instead of cloning (e.g. both repos checked out
-side by side), set `BACKEND_LOCAL_PATH` before the last command:
+side by side), set `BACKEND_LOCAL_PATH` instead of `BACKEND_REPO_TOKEN`:
 ```powershell
 $env:BACKEND_LOCAL_PATH = "..\urban-dry-clean-crm-node"
 node scripts/prepare-backend.cjs publish/win-x64

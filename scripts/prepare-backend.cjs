@@ -14,8 +14,13 @@
  *
  * Backend source:
  *   - By default, shallow-clones BACKEND_REPO_URL at BACKEND_REF into a temp directory.
+ *     urban-dry-clean-crm-node is a PRIVATE repo, so an anonymous clone fails (git tries to
+ *     prompt for credentials, which errors out non-interactively in CI) - set BACKEND_REPO_TOKEN
+ *     to a token with read access to it (a fine-grained PAT is enough; CI passes this from a
+ *     repo secret of the same name - see README.md "Building").
  *   - Set BACKEND_LOCAL_PATH to a local checkout instead (e.g. for side-by-side local dev with
- *     ../urban-dry-clean-crm-node) - skips the clone and builds that directory in place.
+ *     ../urban-dry-clean-crm-node) - skips the clone (and BACKEND_REPO_TOKEN) and builds that
+ *     directory in place.
  *
  * Windows-only: relies on `tar` (bsdtar, built into Windows 10/Server 2019+) to extract the
  * Node.js zip, and `git` to clone the backend repo. This script only ever runs on Windows (CI's
@@ -33,6 +38,18 @@ const NODE_ZIP_URL = `https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERS
 const BACKEND_REPO_URL = process.env.BACKEND_REPO_URL || 'https://github.com/kumarrahul2908/urban-dry-clean-crm-node.git';
 const BACKEND_REF = process.env.BACKEND_REF || 'main';
 const BACKEND_LOCAL_PATH = process.env.BACKEND_LOCAL_PATH || '';
+const BACKEND_REPO_TOKEN = process.env.BACKEND_REPO_TOKEN || '';
+
+/** Embeds a token for HTTPS git auth (x-access-token works for both a PAT and a GITHUB_TOKEN). */
+function withAuth(url, token) {
+  if (!token || !url.startsWith('https://')) return url;
+  return url.replace('https://', `https://x-access-token:${token}@`);
+}
+
+/** Never let a token reach the console, even though CI also masks registered secret values. */
+function redact(text) {
+  return BACKEND_REPO_TOKEN ? text.split(BACKEND_REPO_TOKEN).join('***') : text;
+}
 
 const repoRoot = path.resolve(__dirname, '..');
 const targetArg = process.argv[2];
@@ -40,7 +57,7 @@ const targetDir = targetArg ? path.resolve(targetArg) : path.join(repoRoot, 'res
 const backendOut = path.join(targetDir, 'backend');
 
 function run(cmd, args, cwd) {
-  console.log(`[prepare-backend] $ ${cmd} ${args.join(' ')}  (in ${cwd})`);
+  console.log(redact(`[prepare-backend] $ ${cmd} ${args.join(' ')}  (in ${cwd})`));
   execFileSync(cmd, args, { cwd, stdio: 'inherit' });
 }
 
@@ -107,8 +124,9 @@ function getBackendSource() {
     return { dir: path.resolve(BACKEND_LOCAL_PATH), cleanup: () => {} };
   }
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'udc-backend-'));
-  console.log(`[prepare-backend] cloning ${BACKEND_REPO_URL}#${BACKEND_REF}`);
-  run('git', ['clone', '--depth', '1', '--branch', BACKEND_REF, BACKEND_REPO_URL, tmpDir], process.cwd());
+  console.log(`[prepare-backend] cloning ${BACKEND_REPO_URL}#${BACKEND_REF}${BACKEND_REPO_TOKEN ? ' (authenticated)' : ''}`);
+  const cloneUrl = withAuth(BACKEND_REPO_URL, BACKEND_REPO_TOKEN);
+  run('git', ['clone', '--depth', '1', '--branch', BACKEND_REF, cloneUrl, tmpDir], process.cwd());
   return { dir: tmpDir, cleanup: () => rmrf(tmpDir) };
 }
 
