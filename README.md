@@ -24,7 +24,7 @@ and then dropped in favor of this true native UI.
 | 3 POS / order creation (piece mode) | `NewOrderWindow`, opened from Orders ("+ New Order"): customer search/select (pulls their price list + wallet/outstanding via `pos_customer_summary`), store picker when the user has no fixed store, garment/service catalog from `products` (price-list-aware rates in one call), a cart, due date/urgent level/discount/home delivery/notes, a clearly-labeled client-side estimate (excludes tax/urgent charge - those are server-computed), submits to `pos_orders_create`. Laundry/per-weight order creation, collecting payment at order-creation time, and rate overrides are explicitly out of scope here - see Known gaps. | **done - confirmed green on CI** (run [#9](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41282863270), first try - no compile errors this time) |
 | 4 Workshop (piece items) + Barcode | `WorkshopView`: ready-to-send queue (multi-select + send to a workshop via a challan), in-progress queue, and the accept/return-to-store/store-receive queues, each with their own action. Double-clicking an in-progress item opens `WorkshopItemActionsWindow`, exposing all 11 lifecycle actions (start processing through QC/ironing/packaging, accept/return/receive, mark/resolve unprocessed) - the server is the single source of truth for which one is actually valid from the item's current state, same discipline as every other screen. `BarcodeLookupView`: scan or type a barcode, see the garment/order/customer/status. Laundry (per-weight) queues, workshop schedule/report, and workshop billing are explicitly out of scope - see Known gaps. | **done - confirmed green on CI** (run [#11](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41283747344), first try) |
 | 5 Reports | `ReportsView` (tab strip over three sub-screens): **Summary** (`reports_summary` for a date range - sales/payments/customers/workshop operations, with by-service/top-garments/top-customers breakdowns), **Outstanding** (`outstanding_list` - ageing buckets, searchable, per-customer totals), **Daily Collection** (`daily_collection` - by payment method, with the day's payment list). "Admin" (users/roles/settings) turned out not to be achievable from this app at all - see Known gaps. | **done - confirmed green on CI** (run [#13](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41284803320), first try) |
-| 6 Packaging polish | **Done, confirmed on CI (run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771)):** session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab). **In progress:** a real installer. **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | in progress |
+| 6 Packaging polish | **Done, confirmed on CI** (session persistence + background jobs: run [#15](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41288841771); installer: run [#17](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41289531613)): session persistence (`TokenStore`'s saved token is now validated via `GET /api/mobile/me` on startup and silently restores the session - no more signing in on every launch), background jobs (`BackgroundJobRunner`: WhatsApp worker every minute, photo cleanup/nightly backup/WhatsApp marketing daily, standing in for the server deploy's crontab), and a real installer (`installer/setup.iss`, Inno Setup - produces `UrbanDryCleanCRM-Setup.exe` with Start Menu/optional desktop shortcuts, per-user install by default so a shop-counter standard account doesn't need an admin prompt). **Not achievable by this app alone:** code signing (needs a purchased certificate only the business owner can buy) and true auto-update (needs a decision on where releases are hosted) - see Known gaps. | **done** |
 
 ## Architecture
 
@@ -43,8 +43,10 @@ and then dropped in favor of this true native UI.
 │   └── Udc.App/                net8.0-windows, WPF - the actual UI (Windows-only to build)
 │       ├── App.xaml(.cs)                               boot sequence / window orchestration
 │       └── Views/               SetupWindow, SplashWindow, LoginWindow, MainWindow, DashboardView
-└── scripts/
-    └── prepare-backend.cjs     clones + builds urban-dry-clean-crm-node, bundles a portable Node
+├── scripts/
+│   └── prepare-backend.cjs     clones + builds urban-dry-clean-crm-node, bundles a portable Node
+└── installer/
+    └── setup.iss                Inno Setup script - packages publish/win-x64/ into Setup.exe
 ```
 
 **Why a separate repo from the backend?** The backend (Node/Fastify/TypeScript, plus the DB
@@ -77,8 +79,9 @@ production `node_modules` staged alongside it run unmodified.
 is collected by the Setup window, connection-tested directly from .NET via `MySqlConnector`
 (no need to start the backend first), and saved as JSON to
 `%APPDATA%\UrbanDryCleanCRM\config.json`. The bearer token from `POST /api/mobile/login` is
-saved separately, encrypted at rest with Windows DPAPI (`TokenStore`, current-user scope) -
-not yet wired into the boot sequence to auto-skip the login screen (see Known gaps).
+saved separately, encrypted at rest with Windows DPAPI (`TokenStore`, current-user scope), and
+validated against `GET /api/mobile/me` on every startup so a returning user skips straight past
+the login screen into a restored session.
 
 **Existing PHP/web app secret key:** if this PC points at the same database the web app already
 uses, paste the exact same `APP_SECRET_KEY` into Setup so encrypted values (WhatsApp tokens,
@@ -121,6 +124,15 @@ compiled cleanly. One real compile error (`Timer` used without `using System.Thr
 caught locally in this sandbox before ever reaching CI this time - `dotnet build` on
 `Udc.Client` catches that class of bug directly, since it's plain C#, not a WPF-only issue.
 
+**Phase 6 part 2 (installer) is confirmed**: [CI run #17](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41289531613)
+went green on the first try - the runner installed Inno Setup via chocolatey, compiled
+`installer/setup.iss` against the published `publish/win-x64/` folder, and uploaded the
+resulting `UrbanDryCleanCRM-Setup.exe` (~74 MB, compressed) as its own CI artifact alongside the
+raw publish folder. Not locally verifiable beforehand: an attempt to run the Inno Setup compiler
+under Wine in this Linux sandbox failed at the very first step (the installer download came back
+as an HTML page, not the real `.exe`), so this one relied entirely on the real `windows-latest`
+CI run, same as every WPF screen in every earlier phase.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -137,8 +149,10 @@ step fails with a git auth error.
 `kumarrahul2908/urban-dry-clean-crm-node`, using the `BACKEND_REPO_TOKEN` secret above) next to
 it, on a `windows-latest` runner. Trigger it from the Actions tab (needs this workflow file to
 exist on `main` first - GitHub only lists workflows that are present on the default branch) or
-push to `main`. Download the `urban-dry-clean-crm-native-win-x64` artifact, unzip it, and run
-`Udc.App.exe` - no installer yet (that's Phase 5); for now this published folder *is* the app.
+push to `main`. Two artifacts come out of each run: `UrbanDryCleanCRM-Setup` (download, unzip,
+run `UrbanDryCleanCRM-Setup.exe` - a normal Windows installer with Start Menu/optional desktop
+shortcuts) and `urban-dry-clean-crm-native-win-x64` (the raw published folder, for anyone who'd
+rather copy it over manually without installing).
 
 ### Locally, on Windows
 `urban-dry-clean-crm-node` is private, so the clone needs a token too - use a
@@ -202,9 +216,6 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 - **Audit log, customer order history, and the dormant-customers report aren't wired up** -
   `audit_logs`, `customer_history`, and `dormant_customers` all exist and work, they're just not
   built into a screen yet; good first candidates for a later phase.
-- **No installer yet** - the app is still distributed as the raw self-contained publish folder
-  (unzip and run `Udc.App.exe`), not a proper Setup.exe with Start Menu/Desktop shortcuts. In
-  progress.
 - **No code signing, and this isn't something a later phase can just add.** It requires a
   code-signing certificate purchased from a CA (or a Microsoft Trusted Signing subscription),
   which only the business owner can buy - no amount of further coding here produces one. Without
