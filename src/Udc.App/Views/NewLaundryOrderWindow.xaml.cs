@@ -29,13 +29,22 @@ public partial class NewLaundryOrderWindow : Window
         public decimal Amount => Rate * Weight;
     }
 
+    private sealed class PaymentLineDraft
+    {
+        public int PaymentTypeId { get; init; }
+        public string TypeName { get; init; } = "";
+        public decimal Amount { get; init; }
+    }
+
     private readonly ApiClient _api;
     private readonly string _clientRequestId = Guid.NewGuid().ToString("N");
     private readonly ObservableCollection<BatchLine> _batches = new();
     private readonly ObservableCollection<BatchGarmentLine> _draftGarments = new();
+    private readonly ObservableCollection<PaymentLineDraft> _paymentLines = new();
 
     private CustomerSummary? _selectedCustomer;
     private List<CustomerSummary> _lastCustomerSearchResults = new();
+    private decimal _walletBalance;
 
     public NewLaundryOrderWindow(ApiClient api)
     {
@@ -43,6 +52,7 @@ public partial class NewLaundryOrderWindow : Window
         _api = api;
         BatchesGrid.ItemsSource = _batches;
         BatchGarmentsGrid.ItemsSource = _draftGarments;
+        PaymentLinesGrid.ItemsSource = _paymentLines;
         Loaded += async (_, _) => await LoadLookupsAsync();
     }
 
@@ -56,6 +66,10 @@ public partial class NewLaundryOrderWindow : Window
             UrgentLevelBox.ItemsSource = levelItems;
             UrgentLevelBox.SelectedIndex = 0;
 
+            var paymentTypes = await _api.GetPaymentTypesAsync();
+            PaymentTypeBox.ItemsSource = paymentTypes.PaymentTypes;
+            if (paymentTypes.PaymentTypes.Count > 0) PaymentTypeBox.SelectedIndex = 0;
+
             // laundry_orders_create never reads a store_id from the payload - it always resolves
             // the signed-in user's own fixed store (see OrderService.createLaundryOrder() /
             // resolveAuthorizedStoreId()'s 2-arg call in orders.ts). A floating-store account has
@@ -68,6 +82,7 @@ public partial class NewLaundryOrderWindow : Window
                 CustomerCard.IsEnabled = false;
                 BatchCard.IsEnabled = false;
                 DetailsCard.IsEnabled = false;
+                PaymentCard.IsEnabled = false;
                 CreateOrderButton.IsEnabled = false;
             }
         }
@@ -118,9 +133,11 @@ public partial class NewLaundryOrderWindow : Window
             var summary = await _api.GetPosCustomerSummaryAsync(customer.Id);
             var products = await _api.GetProductsAsync(customer.Id);
             _selectedCustomer = customer;
+            _walletBalance = summary.WalletBalance;
 
             SelectedCustomerText.Text = $"{summary.Customer.Name} ({customer.CustomerCode})";
             SelectedCustomerSubText.Text = $"{summary.Customer.Mobile} - {summary.PriceListName ?? "Default"} price list - Outstanding {Money(summary.Outstanding)}";
+            WalletBalanceText.Text = $"Wallet balance: {Money(summary.WalletBalance)}";
             SelectedCustomerCard.Visibility = Visibility.Visible;
             CustomerSearchPanel.Visibility = Visibility.Collapsed;
             CustomerResultsList.Visibility = Visibility.Collapsed;
@@ -147,11 +164,16 @@ public partial class NewLaundryOrderWindow : Window
         }
         _batches.Clear();
         _draftGarments.Clear();
+        _paymentLines.Clear();
+        WalletAmountBox.Text = "0";
         RecomputeEstimate();
+        RecomputePaymentSummary();
         _selectedCustomer = null;
+        _walletBalance = 0;
         ServiceBox.ItemsSource = null;
         GarmentBox.ItemsSource = null;
         RateText.Text = "-";
+        WalletBalanceText.Text = "";
         SelectedCustomerCard.Visibility = Visibility.Collapsed;
         CustomerSearchPanel.Visibility = Visibility.Visible;
         CustomerSearchBox.Text = "";
@@ -254,12 +276,61 @@ public partial class NewLaundryOrderWindow : Window
         EstimateTotalText.Text = $"≈ {Money(estimate)}";
     }
 
+    // ---- payment (optional) ----------------------------------------------------------------------
+
+    private void AddPaymentLineButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (PaymentTypeBox.SelectedItem is not PaymentTypeOption paymentType)
+        {
+            ShowError("Choose a payment method.");
+            return;
+        }
+        if (!decimal.TryParse(PaymentAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        {
+            ShowError("Enter a valid payment amount greater than zero.");
+            return;
+        }
+        ErrorBanner.Visibility = Visibility.Collapsed;
+        _paymentLines.Add(new PaymentLineDraft { PaymentTypeId = paymentType.Id, TypeName = paymentType.TypeName, Amount = amount });
+        PaymentAmountBox.Text = "";
+        RecomputePaymentSummary();
+    }
+
+    private void RemovePaymentLineButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (PaymentLinesGrid.SelectedItem is PaymentLineDraft line)
+        {
+            _paymentLines.Remove(line);
+            RecomputePaymentSummary();
+        }
+    }
+
+    private void WalletAmountBox_TextChanged(object sender, TextChangedEventArgs e) => RecomputePaymentSummary();
+
+    private void RecomputePaymentSummary()
+    {
+        var paid = _paymentLines.Sum(l => l.Amount);
+        decimal.TryParse(WalletAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var walletAmount);
+        var total = paid + Math.Max(0, walletAmount);
+        PaymentSummaryText.Text = total > 0
+            ? $"Collecting {Money(total)} now ({_paymentLines.Count} line(s) + wallet) - the real due balance is confirmed once the order is created."
+            : "";
+    }
+
     // ---- submit ---------------------------------------------------------------------------------
 
     private async void CreateOrderButton_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedCustomer is null) { ShowError("Select a customer first."); return; }
         if (_batches.Count == 0) { ShowError("Add at least one batch to the order."); return; }
+
+        decimal.TryParse(WalletAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var walletAmount);
+        walletAmount = Math.Max(0, walletAmount);
+        if (walletAmount > _walletBalance + 0.01m)
+        {
+            ShowError($"Wallet amount cannot exceed the customer's available balance of {Money(_walletBalance)}.");
+            return;
+        }
 
         var urgentLevel = UrgentLevelBox.SelectedItem as UrgentLevel;
         var discountType = (DiscountTypeBox.SelectedItem as ComboBoxItem)?.Content as string ?? "Percent";
@@ -287,6 +358,8 @@ public partial class NewLaundryOrderWindow : Window
             DeliveryCharge = deliveryCharge,
             Notes = NotesBox.Text.Trim(),
             DueDate = DueDatePicker.SelectedDate?.ToString("yyyy-MM-dd"),
+            Payments = _paymentLines.Select(l => new PaymentLine { PaymentTypeId = l.PaymentTypeId, Amount = l.Amount }).ToList(),
+            WalletAmount = walletAmount,
         };
 
         CreateOrderButton.IsEnabled = false;

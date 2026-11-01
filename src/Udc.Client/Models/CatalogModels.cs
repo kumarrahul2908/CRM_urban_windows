@@ -46,6 +46,38 @@ public sealed class ProductGarment
     public List<ProductRate> Rates { get; set; } = new();
 }
 
+public sealed class BrandOption
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("brand_name")]
+    public string BrandName { get; set; } = "";
+}
+
+/// <summary><c>GET /api/mobile/pos_brands</c>.</summary>
+public sealed class BrandsResult
+{
+    [JsonPropertyName("brands")]
+    public List<BrandOption> Brands { get; set; } = new();
+}
+
+public sealed class ColorOption
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("color_name")]
+    public string ColorName { get; set; } = "";
+}
+
+/// <summary><c>GET /api/mobile/pos_colors</c>.</summary>
+public sealed class ColorsResult
+{
+    [JsonPropertyName("colors")]
+    public List<ColorOption> Colors { get; set; } = new();
+}
+
 public sealed class PriceListRef
 {
     [JsonPropertyName("id")]
@@ -148,8 +180,9 @@ public sealed class PosCustomerSummary
 }
 
 /// <summary>One line of <c>POST /api/mobile/pos_orders_create</c>'s <c>items</c> array (piece
-/// mode only - see OrderService.priceLine()). Rate overrides and weight-mode lines inside a
-/// piece order are not exposed by this app yet.</summary>
+/// mode only - see OrderService.priceLine()). Weight-mode lines inside a piece order (a garment
+/// priced by weight rather than per piece) are not exposed by this app - use a Laundry order for
+/// weight-based pricing instead.</summary>
 public sealed class CreateOrderItemLine
 {
     [JsonPropertyName("garment_id")]
@@ -160,11 +193,29 @@ public sealed class CreateOrderItemLine
 
     [JsonPropertyName("quantity")]
     public decimal Quantity { get; set; }
+
+    [JsonPropertyName("brand_id")]
+    public int? BrandId { get; set; }
+
+    [JsonPropertyName("color_id")]
+    public int? ColorId { get; set; }
+
+    [JsonPropertyName("remarks")]
+    public string Remarks { get; set; } = "";
+
+    /// <summary>Must be true together with a non-null <see cref="RateOverride"/> for the override
+    /// to go through <c>pos.manual_rate_override</c>'s permission check and be audit-logged - see
+    /// README's Known gaps for a backend quirk where <see cref="RateOverride"/> alone (without
+    /// this flag) is silently honored too, with no permission check at all. This app always sends
+    /// both together or neither, so it never exercises that path.</summary>
+    [JsonPropertyName("manual_override")]
+    public bool ManualOverride { get; set; }
+
+    [JsonPropertyName("rate_override")]
+    public decimal? RateOverride { get; set; }
 }
 
-/// <summary>Body for <c>POST /api/mobile/pos_orders_create</c> (piece-mode order creation).
-/// Collecting payment at order-creation time isn't exposed here yet - use Record Payment right
-/// after (see README's Known gaps).</summary>
+/// <summary>Body for <c>POST /api/mobile/pos_orders_create</c> (piece-mode order creation).</summary>
 public sealed class CreateOrderRequest
 {
     [JsonPropertyName("client_request_id")]
@@ -199,6 +250,12 @@ public sealed class CreateOrderRequest
 
     [JsonPropertyName("due_date")]
     public string? DueDate { get; set; }
+
+    [JsonPropertyName("payments")]
+    public List<PaymentLine> Payments { get; set; } = new();
+
+    [JsonPropertyName("wallet_amount")]
+    public decimal WalletAmount { get; set; }
 }
 
 public sealed class CreateOrderResult
@@ -292,6 +349,12 @@ public sealed class CreateLaundryOrderRequest
 
     [JsonPropertyName("due_date")]
     public string? DueDate { get; set; }
+
+    [JsonPropertyName("payments")]
+    public List<PaymentLine> Payments { get; set; } = new();
+
+    [JsonPropertyName("wallet_amount")]
+    public decimal WalletAmount { get; set; }
 }
 
 public sealed class CreateLaundryOrderResult

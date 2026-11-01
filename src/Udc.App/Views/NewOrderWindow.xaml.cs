@@ -20,23 +20,39 @@ public partial class NewOrderWindow : Window
         public decimal Quantity { get; init; }
         public decimal Rate { get; init; }
         public decimal Amount => Rate * Quantity;
+        public int? BrandId { get; init; }
+        public string? BrandName { get; init; }
+        public int? ColorId { get; init; }
+        public string? ColorName { get; init; }
+        public string Remarks { get; init; } = "";
+        public bool ManualOverride { get; init; }
+    }
+
+    private sealed class PaymentLineDraft
+    {
+        public int PaymentTypeId { get; init; }
+        public string TypeName { get; init; } = "";
+        public decimal Amount { get; init; }
     }
 
     private readonly ApiClient _api;
     private readonly string _clientRequestId = Guid.NewGuid().ToString("N");
     private readonly ObservableCollection<CartLine> _cart = new();
+    private readonly ObservableCollection<PaymentLineDraft> _paymentLines = new();
 
     private CustomerSummary? _selectedCustomer;
     private List<CustomerSummary> _lastCustomerSearchResults = new();
     private ProductsResult? _products;
     private List<StoreOption> _stores = new();
     private bool _storeSelectionRequired;
+    private decimal _walletBalance;
 
     public NewOrderWindow(ApiClient api)
     {
         InitializeComponent();
         _api = api;
         CartGrid.ItemsSource = _cart;
+        PaymentLinesGrid.ItemsSource = _paymentLines;
         Loaded += async (_, _) => await LoadLookupsAsync();
     }
 
@@ -59,6 +75,20 @@ public partial class NewOrderWindow : Window
                 StoreBox.ItemsSource = _stores;
                 if (_stores.Count > 0) StoreBox.SelectedIndex = 0;
             }
+
+            var brandItems = new List<BrandOption> { new() { Id = 0, BrandName = "(none)" } };
+            brandItems.AddRange(await _api.GetBrandsAsync());
+            BrandBox.ItemsSource = brandItems;
+            BrandBox.SelectedIndex = 0;
+
+            var colorItems = new List<ColorOption> { new() { Id = 0, ColorName = "(none)" } };
+            colorItems.AddRange(await _api.GetColorsAsync());
+            ColorBox.ItemsSource = colorItems;
+            ColorBox.SelectedIndex = 0;
+
+            var paymentTypes = await _api.GetPaymentTypesAsync();
+            PaymentTypeBox.ItemsSource = paymentTypes.PaymentTypes;
+            if (paymentTypes.PaymentTypes.Count > 0) PaymentTypeBox.SelectedIndex = 0;
         }
         catch (ApiException ex)
         {
@@ -106,9 +136,11 @@ public partial class NewOrderWindow : Window
         {
             var summary = await _api.GetPosCustomerSummaryAsync(customer.Id);
             _selectedCustomer = customer;
+            _walletBalance = summary.WalletBalance;
 
             SelectedCustomerText.Text = $"{summary.Customer.Name} ({customer.CustomerCode})";
             SelectedCustomerSubText.Text = $"{summary.Customer.Mobile} - {summary.PriceListName ?? "Default"} price list - Outstanding {Money(summary.Outstanding)}";
+            WalletBalanceText.Text = $"Wallet balance: {Money(summary.WalletBalance)}";
             SelectedCustomerCard.Visibility = Visibility.Visible;
             CustomerSearchPanel.Visibility = Visibility.Collapsed;
             CustomerResultsList.Visibility = Visibility.Collapsed;
@@ -136,12 +168,17 @@ public partial class NewOrderWindow : Window
             if (choice != MessageBoxResult.Yes) return;
         }
         _cart.Clear();
+        _paymentLines.Clear();
+        WalletAmountBox.Text = "0";
         RecomputeEstimate();
+        RecomputePaymentSummary();
         _selectedCustomer = null;
         _products = null;
+        _walletBalance = 0;
         ItemsCard.IsEnabled = false;
         GarmentsGrid.ItemsSource = null;
         ServiceBox.ItemsSource = null;
+        WalletBalanceText.Text = "";
         SelectedCustomerCard.Visibility = Visibility.Collapsed;
         CustomerSearchPanel.Visibility = Visibility.Visible;
         CustomerSearchBox.Text = "";
@@ -173,6 +210,11 @@ public partial class NewOrderWindow : Window
         ServiceBox.SelectedIndex = pieceRates.Count == 0 ? -1 : Math.Max(0, defaultIndex);
     }
 
+    private void ManualOverrideBox_CheckedChanged(object sender, RoutedEventArgs e)
+    {
+        OverrideRatePanel.IsEnabled = ManualOverrideBox.IsChecked == true;
+    }
+
     private void AddToCartButton_Click(object sender, RoutedEventArgs e)
     {
         if (GarmentsGrid.SelectedItem is not ProductGarment garment)
@@ -191,6 +233,20 @@ public partial class NewOrderWindow : Window
             return;
         }
 
+        var manualOverride = ManualOverrideBox.IsChecked == true;
+        var effectiveRate = rate.PieceRate ?? 0;
+        if (manualOverride)
+        {
+            if (!decimal.TryParse(OverrideRateBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out effectiveRate) || effectiveRate < 0)
+            {
+                ShowError("Enter a non-negative override rate.");
+                return;
+            }
+        }
+
+        var brand = BrandBox.SelectedItem as BrandOption;
+        var color = ColorBox.SelectedItem as ColorOption;
+
         ErrorBanner.Visibility = Visibility.Collapsed;
         _cart.Add(new CartLine
         {
@@ -199,9 +255,18 @@ public partial class NewOrderWindow : Window
             ServiceId = rate.ServiceId,
             ServiceName = rate.ServiceName,
             Quantity = qty,
-            Rate = rate.PieceRate ?? 0,
+            Rate = effectiveRate,
+            BrandId = brand is { Id: > 0 } ? brand.Id : null,
+            BrandName = brand is { Id: > 0 } ? brand.BrandName : null,
+            ColorId = color is { Id: > 0 } ? color.Id : null,
+            ColorName = color is { Id: > 0 } ? color.ColorName : null,
+            Remarks = ItemRemarksBox.Text.Trim(),
+            ManualOverride = manualOverride,
         });
         QuantityBox.Text = "1";
+        ItemRemarksBox.Text = "";
+        ManualOverrideBox.IsChecked = false;
+        OverrideRateBox.Text = "";
         RecomputeEstimate();
     }
 
@@ -241,6 +306,47 @@ public partial class NewOrderWindow : Window
         EstimateTotalText.Text = $"≈ {Money(estimate)}";
     }
 
+    // ---- payment (optional) ----------------------------------------------------------------------
+
+    private void AddPaymentLineButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (PaymentTypeBox.SelectedItem is not PaymentTypeOption paymentType)
+        {
+            ShowError("Choose a payment method.");
+            return;
+        }
+        if (!decimal.TryParse(PaymentAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        {
+            ShowError("Enter a valid payment amount greater than zero.");
+            return;
+        }
+        ErrorBanner.Visibility = Visibility.Collapsed;
+        _paymentLines.Add(new PaymentLineDraft { PaymentTypeId = paymentType.Id, TypeName = paymentType.TypeName, Amount = amount });
+        PaymentAmountBox.Text = "";
+        RecomputePaymentSummary();
+    }
+
+    private void RemovePaymentLineButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (PaymentLinesGrid.SelectedItem is PaymentLineDraft line)
+        {
+            _paymentLines.Remove(line);
+            RecomputePaymentSummary();
+        }
+    }
+
+    private void WalletAmountBox_TextChanged(object sender, TextChangedEventArgs e) => RecomputePaymentSummary();
+
+    private void RecomputePaymentSummary()
+    {
+        var paid = _paymentLines.Sum(l => l.Amount);
+        decimal.TryParse(WalletAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var walletAmount);
+        var total = paid + Math.Max(0, walletAmount);
+        PaymentSummaryText.Text = total > 0
+            ? $"Collecting {Money(total)} now ({_paymentLines.Count} line(s) + wallet) - the real due balance is confirmed once the order is created."
+            : "";
+    }
+
     // ---- submit ---------------------------------------------------------------------------------
 
     private async void CreateOrderButton_Click(object sender, RoutedEventArgs e)
@@ -248,6 +354,14 @@ public partial class NewOrderWindow : Window
         if (_selectedCustomer is null) { ShowError("Select a customer first."); return; }
         if (_cart.Count == 0) { ShowError("Add at least one item to the cart."); return; }
         if (_storeSelectionRequired && StoreBox.SelectedItem is not StoreOption) { ShowError("Select a store."); return; }
+
+        decimal.TryParse(WalletAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var walletAmount);
+        walletAmount = Math.Max(0, walletAmount);
+        if (walletAmount > _walletBalance + 0.01m)
+        {
+            ShowError($"Wallet amount cannot exceed the customer's available balance of {Money(_walletBalance)}.");
+            return;
+        }
 
         var urgentLevel = UrgentLevelBox.SelectedItem as UrgentLevel;
         var discountType = (DiscountTypeBox.SelectedItem as ComboBoxItem)?.Content as string ?? "Percent";
@@ -261,7 +375,17 @@ public partial class NewOrderWindow : Window
             ClientRequestId = _clientRequestId,
             CustomerId = _selectedCustomer.Id,
             StoreId = _storeSelectionRequired ? (StoreBox.SelectedItem as StoreOption)?.Id : null,
-            Items = _cart.Select(c => new CreateOrderItemLine { GarmentId = c.GarmentId, ServiceId = c.ServiceId, Quantity = c.Quantity }).ToList(),
+            Items = _cart.Select(c => new CreateOrderItemLine
+            {
+                GarmentId = c.GarmentId,
+                ServiceId = c.ServiceId,
+                Quantity = c.Quantity,
+                BrandId = c.BrandId,
+                ColorId = c.ColorId,
+                Remarks = c.Remarks,
+                ManualOverride = c.ManualOverride,
+                RateOverride = c.ManualOverride ? c.Rate : null,
+            }).ToList(),
             UrgentLevelId = urgentLevel is { Id: > 0 } ? urgentLevel.Id : null,
             DiscountType = discountType,
             DiscountValue = discountValue,
@@ -269,6 +393,8 @@ public partial class NewOrderWindow : Window
             DeliveryCharge = deliveryCharge,
             Notes = NotesBox.Text.Trim(),
             DueDate = DueDatePicker.SelectedDate?.ToString("yyyy-MM-dd"),
+            Payments = _paymentLines.Select(l => new PaymentLine { PaymentTypeId = l.PaymentTypeId, Amount = l.Amount }).ToList(),
+            WalletAmount = walletAmount,
         };
 
         CreateOrderButton.IsEnabled = false;

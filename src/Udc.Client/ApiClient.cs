@@ -142,6 +142,12 @@ public sealed class ApiClient : IDisposable
     public async Task<List<UrgentLevel>> GetUrgentLevelsAsync(CancellationToken ct = default) =>
         (await SendAsync<UrgentLevelsResult>(HttpMethod.Get, "/api/mobile/urgent_levels", null, ct)).UrgentLevels;
 
+    public async Task<List<BrandOption>> GetBrandsAsync(CancellationToken ct = default) =>
+        (await SendAsync<BrandsResult>(HttpMethod.Get, "/api/mobile/pos_brands", null, ct)).Brands;
+
+    public async Task<List<ColorOption>> GetColorsAsync(CancellationToken ct = default) =>
+        (await SendAsync<ColorsResult>(HttpMethod.Get, "/api/mobile/pos_colors", null, ct)).Colors;
+
     public Task<PosAvailableStoresResult> GetAvailableStoresAsync(CancellationToken ct = default) =>
         SendAsync<PosAvailableStoresResult>(HttpMethod.Get, "/api/mobile/pos_available_stores", null, ct);
 

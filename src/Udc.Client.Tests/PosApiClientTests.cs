@@ -103,6 +103,59 @@ public class PosApiClientTests
     }
 
     [Fact]
+    public async Task CreateOrderAsync_SendsBrandColorRemarksOverrideAndPayments()
+    {
+        var body = """{"success":true,"data":{"order_id":78,"order_number":"ST-0078","invoice_number":"INV-0078","grand_total":120,"warnings":[]}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        var request = new CreateOrderRequest
+        {
+            ClientRequestId = "test-order-2",
+            CustomerId = 1,
+            Items = new List<CreateOrderItemLine>
+            {
+                new() { GarmentId = 10, ServiceId = 1, Quantity = 1, BrandId = 3, ColorId = 5, Remarks = "Small stain on collar", ManualOverride = true, RateOverride = 100 },
+            },
+            Payments = new List<PaymentLine> { new() { PaymentTypeId = 1, Amount = 60 } },
+            WalletAmount = 60,
+        };
+
+        var result = await client.CreateOrderAsync(request);
+
+        Assert.Equal(78, result.OrderId);
+        Assert.Single(request.Items);
+        Assert.True(request.Items[0].ManualOverride);
+        Assert.Equal(100m, request.Items[0].RateOverride);
+        Assert.Single(request.Payments);
+        Assert.Equal(60m, request.WalletAmount);
+    }
+
+    [Fact]
+    public async Task GetBrandsAsync_UnwrapsTheList()
+    {
+        var body = """{"success":true,"data":{"brands":[{"id":3,"brand_name":"Raymond"}]}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var brands = await client.GetBrandsAsync();
+
+        Assert.Single(brands);
+        Assert.Equal("Raymond", brands[0].BrandName);
+    }
+
+    [Fact]
+    public async Task GetColorsAsync_UnwrapsTheList()
+    {
+        var body = """{"success":true,"data":{"colors":[{"id":5,"color_name":"Blue"}]}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var colors = await client.GetColorsAsync();
+
+        Assert.Single(colors);
+        Assert.Equal("Blue", colors[0].ColorName);
+    }
+
+    [Fact]
     public async Task GetProductsAsync_ParsesUniversalServices()
     {
         var body = """
@@ -146,6 +199,31 @@ public class PosApiClientTests
         Assert.Equal("ST-0090", result.OrderNumber);
         Assert.Equal(HttpMethod.Post, handler.LastRequest!.Method);
         Assert.Equal("/api/mobile/laundry_orders_create", handler.LastRequest.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task CreateLaundryOrderAsync_SendsPaymentsAndWalletAmount()
+    {
+        var body = """{"success":true,"data":{"order_id":91,"order_number":"ST-0091","grand_total":300,"warnings":[]}}""";
+        using var client = new ApiClient("http://127.0.0.1:3100", new FakeHttpMessageHandler(HttpStatusCode.OK, body));
+
+        var request = new CreateLaundryOrderRequest
+        {
+            ClientRequestId = "test-laundry-2",
+            CustomerId = 1,
+            Batches = new List<CreateLaundryBatchLine>
+            {
+                new() { ServiceId = 5, Weight = 5, Rate = 60, GarmentCount = 1, Garments = new List<LaundryBatchGarmentLine> { new() { GarmentId = 10, Quantity = 1 } } },
+            },
+            Payments = new List<PaymentLine> { new() { PaymentTypeId = 1, Amount = 150 } },
+            WalletAmount = 50,
+        };
+
+        var result = await client.CreateLaundryOrderAsync(request);
+
+        Assert.Equal(91, result.OrderId);
+        Assert.Single(request.Payments);
+        Assert.Equal(50m, request.WalletAmount);
     }
 
     [Fact]

@@ -200,6 +200,58 @@
                         <TextBox x:Name="NotesBox" AcceptsReturn="True" Height="60" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+
+                <!-- Payment (optional) -->
+                <Border x:Name="PaymentCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="PAYMENT (OPTIONAL)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+                        <TextBlock x:Name="WalletBalanceText" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <Label Content="Payment method" />
+                                <ComboBox x:Name="PaymentTypeBox" DisplayMemberPath="TypeName" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Amount" />
+                                <TextBox x:Name="PaymentAmountBox" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" VerticalAlignment="Bottom">
+                                <Button Content="Add Line" Style="{StaticResource SecondaryButton}" Click="AddPaymentLineButton_Click" />
+                            </StackPanel>
+                        </Grid>
+
+                        <DataGrid x:Name="PaymentLinesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Height="90" Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Method" Binding="{Binding TypeName}" Width="2*" />
+                                <DataGridTextColumn Header="Amount" Binding="{Binding Amount}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Button Content="Remove Selected Line" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,0,0,8" Click="RemovePaymentLineButton_Click" />
+
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="150" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" x:Name="PaymentSummaryText" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                            <StackPanel Grid.Column="2">
+                                <Label Content="Wallet amount" />
+                                <TextBox x:Name="WalletAmountBox" Text="0" TextChanged="WalletAmountBox_TextChanged" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
