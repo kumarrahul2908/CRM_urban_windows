@@ -1,0 +1,32 @@
+name: Build native Windows app
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PUBLISH_DIR: publish/win-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+
+      - name: Test Udc.Client (the testable, non-UI part)
+        run: dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj -c Release
+
+      - name: Publish Udc.App (self-contained win-x64)
+        run: dotnet publish src/Udc.App/Udc.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o ${{ env.PUBLISH_DIR }}
+
+      - name: Stage the backend (clone + build kumarrahul2908/urban-dry-clean-crm-node, bundle a portable Node.js runtime) next to Udc.App.exe
+        run: node scripts/prepare-backend.cjs ${{ env.PUBLISH_DIR }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: urban-dry-clean-crm-native-win-x64
+          path: ${{ env.PUBLISH_DIR }}
+          if-no-files-found: error
