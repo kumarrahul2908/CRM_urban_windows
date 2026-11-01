@@ -30,11 +30,15 @@
         <Border DockPanel.Dock="Left" Width="210" Background="#0B1E3D">
             <StackPanel Margin="0,16">
                 <TextBlock Text="MENU" Foreground="#7C8DB5" FontSize="11" FontWeight="Bold" Margin="20,8,0,8" />
-                <Border Background="#12325E" Margin="8,0" CornerRadius="6">
-                    <TextBlock Text="Dashboard" Foreground="White" FontWeight="SemiBold" Padding="12,10" />
+                <Border x:Name="NavDashboard" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavDashboard_Click">
+                    <TextBlock x:Name="NavDashboardText" Text="Dashboard" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
                 </Border>
-                <TextBlock Text="Customers" Foreground="#5E6E93" Padding="20,10,0,10" />
-                <TextBlock Text="Orders / POS" Foreground="#5E6E93" Padding="20,10,0,10" />
+                <Border x:Name="NavCustomers" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavCustomers_Click">
+                    <TextBlock x:Name="NavCustomersText" Text="Customers" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
+                </Border>
+                <Border x:Name="NavOrders" Margin="8,0" CornerRadius="6" Cursor="Hand" MouseLeftButtonUp="NavOrders_Click">
+                    <TextBlock x:Name="NavOrdersText" Text="Orders" Foreground="#5E6E93" FontWeight="SemiBold" Padding="12,10" />
+                </Border>
                 <TextBlock Text="Workshop" Foreground="#5E6E93" Padding="20,10,0,10" />
                 <TextBlock Text="Payments" Foreground="#5E6E93" Padding="20,10,0,10" />
                 <TextBlock Text="Reports" Foreground="#5E6E93" Padding="20,10,0,10" />

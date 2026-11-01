@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Udc.Client;
 using Udc.Client.Models;
 
@@ -28,7 +30,7 @@ public partial class MainWindow : Window
         _api = api;
         Title = $"Urban Dry Clean CRM - {login.User.FullName} ({login.User.RoleName})";
         StatusBarText.Text = $"Signed in as {login.User.Username} - local server http://127.0.0.1:{App.CurrentConfig?.Port ?? 3100}";
-        ContentArea.Content = new DashboardView(api);
+        ShowDashboard();
 
         Closed += (_, _) =>
         {
@@ -67,9 +69,38 @@ public partial class MainWindow : Window
 
     private void ExitMenuItem_Click(object sender, RoutedEventArgs e) => Close();
 
-    private void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
+    private void RefreshMenuItem_Click(object sender, RoutedEventArgs e) => ShowDashboard();
+
+    private void NavDashboard_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowDashboard();
+    private void NavCustomers_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowCustomers();
+    private void NavOrders_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) => ShowOrders();
+
+    private void ShowDashboard()
     {
-        ContentArea.Content = new DashboardView(_api); // simplest reload for Phase 1 (re-fetches on Loaded)
+        SelectNav(NavDashboard);
+        ContentArea.Content = new DashboardView(_api); // fresh instance each time - re-fetches on Loaded
+    }
+
+    private void ShowCustomers()
+    {
+        SelectNav(NavCustomers);
+        ContentArea.Content = new CustomersView(_api);
+    }
+
+    private void ShowOrders()
+    {
+        SelectNav(NavOrders);
+        ContentArea.Content = new OrdersView(_api);
+    }
+
+    private void SelectNav(Border active)
+    {
+        foreach (var (border, text) in new[] { (NavDashboard, NavDashboardText), (NavCustomers, NavCustomersText), (NavOrders, NavOrdersText) })
+        {
+            var isActive = border == active;
+            border.Background = isActive ? new SolidColorBrush(Color.FromRgb(0x12, 0x32, 0x5E)) : Brushes.Transparent;
+            text.Foreground = isActive ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x5E, 0x6E, 0x93));
+        }
     }
 
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e)

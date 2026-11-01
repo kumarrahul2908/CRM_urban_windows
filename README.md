@@ -19,11 +19,12 @@ and then dropped in favor of this true native UI.
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 Foundation | Solution scaffold (`Udc.Client` testable class library + `Udc.App` WPF UI); `AppConfig`/`ConfigStore`/`TokenStore` (DPAPI-encrypted); `BackendProcessManager` (bundles + launches a portable Node runtime); `DbConnectionTester` (native MySQL connection test, no backend needed); `ApiClient` (typed wrapper over `/api/mobile/*`); Setup window (first-run DB config + test), Splash window, Login window, main shell window (menu, sidebar placeholder) with a real **Dashboard** screen (stat cards + 7-day sales) backed by live data from `dashboard_summary`; CI build (`windows-latest`, self-contained `dotnet publish` + portable Node bundling + backend clone-and-build) | **done (code) - not yet run on a real Windows PC**, see Verification below |
-| 2 Customers + Orders/POS | Customer list/detail/create, order creation (piece + laundry), order list/detail, payments, wallet | planned |
-| 3 Workshop + Barcode | QC/Ironing/Packaging queue screens, challans, barcode/tag scanning + printing | planned |
-| 4 Reports + Admin | Reports, master data, admin settings, users/roles, WhatsApp admin | planned |
-| 5 Packaging polish | Proper installer (MSIX or WiX) with Start Menu/Desktop shortcuts, code signing, auto-update, background jobs (WhatsApp worker, nightly backup, photo cleanup - see Known gaps) | planned |
+| 1 Foundation | Solution scaffold (`Udc.Client` testable class library + `Udc.App` WPF UI); `AppConfig`/`ConfigStore`/`TokenStore` (DPAPI-encrypted); `BackendProcessManager` (bundles + launches a portable Node runtime); `DbConnectionTester` (native MySQL connection test, no backend needed); `ApiClient` (typed wrapper over `/api/mobile/*`); Setup window (first-run DB config + test), Splash window, Login window, main shell window (menu, sidebar) with a real **Dashboard** screen (stat cards + 7-day sales) backed by live data from `dashboard_summary`; CI build (`windows-latest`, self-contained `dotnet publish` + portable Node bundling + backend clone-and-build) | **done - confirmed green on `windows-latest` CI** (run [#6](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41279323189)): tests pass, `Udc.App` compiles, backend clones/builds/bundles, artifact produced |
+| 2 Customers + Orders (view) | **Customers:** list (search + pagination), detail (contact info, price list, wallet balance, outstanding), create. **Orders:** list (search + pagination), detail (items, payments, status, balance due), Record Payment (single payment line). Sidebar navigation wired up (Dashboard / Customers / Orders). | **done (code) - not yet confirmed on CI**, see Verification below |
+| 3 POS / order creation | New order screen (piece + laundry): garment/service catalog browsing, price-list-aware rates, cart, discounts, submit. This is the single biggest remaining screen (the real app's `OrderService.createOrder()` alone is ~2000 lines) - deliberately split out from Phase 2 rather than rushed. | planned |
+| 4 Workshop + Barcode | QC/Ironing/Packaging queue screens, challans, barcode/tag scanning + printing | planned |
+| 5 Reports + Admin | Reports, master data, admin settings, users/roles, WhatsApp admin | planned |
+| 6 Packaging polish | Proper installer (MSIX or WiX) with Start Menu/Desktop shortcuts, code signing, auto-update, background jobs (WhatsApp worker, nightly backup, photo cleanup - see Known gaps) | planned |
 
 ## Architecture
 
@@ -85,23 +86,27 @@ etc.) stay decryptable from both places.
 
 ## Verification
 
-This was built and tested as far as a Linux sandbox (no Windows) allows:
+**Phase 1 is confirmed**: [CI run #6](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41279323189)
+is fully green on `windows-latest` - `Udc.Client.Tests` (13/13), `Udc.App` compiles and
+publishes, the private backend repo clones/builds, the portable Node runtime bundles, and the
+`urban-dry-clean-crm-native-win-x64` artifact was produced. Getting there took two real,
+Windows-only bugs a Linux sandbox could never have caught by review alone (see git history:
+`BACKEND_REPO_TOKEN` auth and `execFileSync` needing `shell:true` for `npm` on Windows) - both
+now fixed.
 
-- `dotnet build` / `dotnet test` on `Udc.Client` + `Udc.Client.Tests`: **passing** (13 tests -
-  `AppConfig.Merge` semantics, `BackendProcessManager.BuildEnvironment`, `ApiClient` against a
-  fake `HttpMessageHandler` covering login success/failure, authenticated `GET /api/mobile/me`,
-  and `dashboard_summary` parsing).
-- `Udc.App` (the WPF UI): **cannot be built or run outside Windows** - confirmed directly, not
-  assumed (see Architecture above). It was written carefully and reviewed by hand, but has not
-  been compiled. `.github/workflows/build.yml` builds it for real on a `windows-latest` GitHub
-  Actions runner; that is also the first point it gets an actual compiler.
-- `scripts/prepare-backend.cjs`: clones+builds the backend repo and downloads a Windows Node.js
-  build, using `tar` (bsdtar, built into Windows) to extract it - all Windows-only or
-  network-restricted operations in that sandbox, so this also could not be run there.
+**Phase 2 (Customers + Orders view) is not yet confirmed** - built in the same Linux sandbox:
 
-**Before relying on Phase 1, run the CI workflow (or build locally on Windows) and fix whatever
-the real compiler finds** - treat this phase as reviewed-but-unverified until that first green
-build.
+- `dotnet build` / `dotnet test` on `Udc.Client` + `Udc.Client.Tests`: **passing** (21 tests -
+  the original 13 plus 8 new ones covering `GetCustomersAsync`/`GetCustomerDetailAsync`/
+  `CreateCustomerAsync`/`GetOrdersAsync`/`GetOrderDetailAsync`/`GetPaymentTypesAsync`/
+  `RecordPaymentAsync` against a fake `HttpMessageHandler`, including the duplicate-customer
+  error path and query-string building).
+- The new WPF screens (`CustomersView`, `CustomerDetailWindow`, `CustomerFormWindow`,
+  `OrdersView`, `OrderDetailWindow`, `RecordPaymentWindow`) and the `MainWindow` sidebar
+  navigation wiring: **written and reviewed by hand, not yet compiled anywhere** - same
+  Windows-only-toolchain limitation as Phase 1. Treat this phase as reviewed-but-unverified until
+  the next CI run is green; given Phase 1's experience, don't be surprised if a Windows-only
+  issue turns up that this review couldn't catch.
 
 ## Building
 
@@ -147,17 +152,22 @@ Only `Udc.Client` (+ tests) can be built/run here - `Udc.App` needs Windows (see
 dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 ```
 
-## Known gaps (Phase 1)
+## Known gaps
 
 - **No background jobs yet.** The Electron prototype ran the WhatsApp outbound worker, photo
   cleanup, nightly backup and WhatsApp marketing jobs on timers while the app was open (there's
   no system cron on a desktop PC). `Udc.App` doesn't do this yet - WhatsApp messages will queue
-  but not actually send until this is ported. Needs doing before Phase 1 is deployable for real
+  but not actually send until this is ported. Needs doing before this app is deployable for real
   shop use, even though it's not core "native UI" work.
 - **Session isn't restored on restart.** `TokenStore` saves the bearer token on login, but
   `App.xaml.cs` doesn't yet try it before showing the Login window - every launch requires
   signing in again.
-- **No installer, no code signing, no auto-update** - see Phase 5.
+- **No order creation (POS) yet** - see Phase 3. Orders can only be viewed, not created, from
+  this app so far.
+- **Record Payment supports one payment line only** - the backend accepts a split across several
+  payment methods in one go (`payment_lines[]`); the UI only exposes a single method for now.
+- **No customer edit** - only create and view; `customers_update` isn't wired up yet.
+- **No installer, no code signing, no auto-update** - see Phase 6.
 - **Database backups** (once ported) will have the same `mysqldump`-on-PATH requirement the
   backend's `DatabaseBackupService` already has - unrelated to this app, documented here so it
   isn't a surprise later.

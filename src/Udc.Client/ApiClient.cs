@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -88,6 +89,38 @@ public sealed class ApiClient : IDisposable
 
     public Task<DashboardSummary> GetDashboardSummaryAsync(CancellationToken ct = default) =>
         SendAsync<DashboardSummary>(HttpMethod.Get, "/api/mobile/dashboard_summary", null, ct);
+
+    private static string BuildQuery(params (string Key, string? Value)[] parms)
+    {
+        var parts = parms.Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value!)}");
+        var qs = string.Join("&", parts);
+        return qs.Length > 0 ? "?" + qs : "";
+    }
+
+    // ---- customers ---------------------------------------------------------------------------
+
+    public Task<CustomerListResult> GetCustomersAsync(string search = "", int page = 1, CancellationToken ct = default) =>
+        SendAsync<CustomerListResult>(HttpMethod.Get, "/api/mobile/customers_list" + BuildQuery(("q", search), ("page", page.ToString())), null, ct);
+
+    public Task<CustomerDetailResult> GetCustomerDetailAsync(int id, CancellationToken ct = default) =>
+        SendAsync<CustomerDetailResult>(HttpMethod.Get, "/api/mobile/customers_detail" + BuildQuery(("id", id.ToString())), null, ct);
+
+    public Task<CreateCustomerResult> CreateCustomerAsync(CreateCustomerRequest request, CancellationToken ct = default) =>
+        SendAsync<CreateCustomerResult>(HttpMethod.Post, "/api/mobile/customers_create", request, ct);
+
+    // ---- orders --------------------------------------------------------------------------------
+
+    public Task<OrderListResult> GetOrdersAsync(string search = "", int page = 1, CancellationToken ct = default) =>
+        SendAsync<OrderListResult>(HttpMethod.Get, "/api/mobile/orders_list" + BuildQuery(("q", search), ("page", page.ToString())), null, ct);
+
+    public Task<OrderDetailResult> GetOrderDetailAsync(int id, CancellationToken ct = default) =>
+        SendAsync<OrderDetailResult>(HttpMethod.Get, "/api/mobile/orders_detail" + BuildQuery(("id", id.ToString())), null, ct);
+
+    public Task<PaymentTypesResult> GetPaymentTypesAsync(CancellationToken ct = default) =>
+        SendAsync<PaymentTypesResult>(HttpMethod.Get, "/api/mobile/payments_list", null, ct);
+
+    public Task<RecordPaymentResult> RecordPaymentAsync(RecordPaymentRequest request, CancellationToken ct = default) =>
+        SendAsync<RecordPaymentResult>(HttpMethod.Post, "/api/mobile/orders_record_payment", request, ct);
 
     public void Dispose() => _http.Dispose();
 }
