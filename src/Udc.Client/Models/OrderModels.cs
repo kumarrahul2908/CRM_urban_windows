@@ -135,6 +135,9 @@ public sealed class OrderHeader
     [JsonPropertyName("status_label")]
     public string? StatusLabel { get; set; }
 
+    [JsonPropertyName("color")]
+    public string? Color { get; set; }
+
     [JsonPropertyName("customer_name")]
     public string? CustomerName { get; set; }
 
