@@ -8,7 +8,8 @@
         Background="{StaticResource BgBrush}">
     <DockPanel Margin="24">
         <TextBlock DockPanel.Dock="Top" x:Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,2" />
-        <TextBlock DockPanel.Dock="Top" x:Name="SubtitleText" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,16" />
+        <TextBlock DockPanel.Dock="Top" x:Name="SubtitleText" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,2" />
+        <TextBlock DockPanel.Dock="Top" Text="Greyed-out actions aren't valid from this item's current state. The server always has the final say." FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,16" TextWrapping="Wrap" />
 
         <Button DockPanel.Dock="Bottom" Content="Close" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Margin="0,16,0,0" Click="CloseButton_Click" />
 
@@ -23,27 +24,27 @@
 
                 <TextBlock Text="WORKSHOP PROCESSING" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
                 <UniformGrid Columns="2" Margin="0,0,0,16">
-                    <Button Content="Start Processing" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="start_processing" />
-                    <Button Content="Complete Washing &#8594; QC" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_washing" />
-                    <Button Content="Pass QC &#8594; Ready" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="pass_qc" />
-                    <Button Content="Complete Ironing &#8594; Packed" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_ironing" />
+                    <Button x:Name="StartProcessingButton" Content="Start Processing" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="start_processing" />
+                    <Button x:Name="CompleteWashingButton" Content="Complete Washing &#8594; QC" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_washing" />
+                    <Button x:Name="PassQcButton" Content="Pass QC &#8594; Ready" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="pass_qc" />
+                    <Button x:Name="CompleteIroningButton" Content="Complete Ironing &#8594; Packed" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="complete_ironing" />
                 </UniformGrid>
 
                 <TextBlock Text="COMPLETION" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
-                <Button Content="Complete Processing (workshop done)" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,0,0,16" Click="ActionButton_Click" Tag="complete_processing" />
+                <Button x:Name="CompleteProcessingButton" Content="Complete Processing (workshop done)" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,0,0,16" Click="ActionButton_Click" Tag="complete_processing" />
 
                 <TextBlock Text="RETURN FLOW" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
                 <UniformGrid Columns="2" Margin="0,0,0,16">
-                    <Button Content="Accept" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="accept" />
-                    <Button Content="Return to Store" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="return_to_store" />
-                    <Button Content="Store Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="store_receive" />
-                    <Button Content="Force Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="force_receive" />
+                    <Button x:Name="AcceptButton" Content="Accept" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="accept" />
+                    <Button x:Name="ReturnToStoreButton" Content="Return to Store" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="return_to_store" />
+                    <Button x:Name="StoreReceiveButton" Content="Store Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,6,6" Click="ActionButton_Click" Tag="store_receive" />
+                    <Button x:Name="ForceReceiveButton" Content="Force Receive" Style="{StaticResource SecondaryButton}" Margin="0,0,0,6" Click="ActionButton_Click" Tag="force_receive" />
                 </UniformGrid>
 
                 <TextBlock Text="EXCEPTIONS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8" />
                 <UniformGrid Columns="2">
-                    <Button Content="Mark Unprocessed" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Click="ActionButton_Click" Tag="mark_unprocessed" />
-                    <Button Content="Resolve Unprocessed" Style="{StaticResource SecondaryButton}" Click="ActionButton_Click" Tag="resolve_unprocessed" />
+                    <Button x:Name="MarkUnprocessedButton" Content="Mark Unprocessed" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Click="ActionButton_Click" Tag="mark_unprocessed" />
+                    <Button x:Name="ResolveUnprocessedButton" Content="Resolve Unprocessed" Style="{StaticResource SecondaryButton}" Click="ActionButton_Click" Tag="resolve_unprocessed" />
                 </UniformGrid>
             </StackPanel>
         </ScrollViewer>

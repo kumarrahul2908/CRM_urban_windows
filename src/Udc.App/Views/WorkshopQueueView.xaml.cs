@@ -98,7 +98,7 @@ public partial class WorkshopQueueView : UserControl
     private async void InProgressGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (InProgressGrid.SelectedItem is not WorkshopPieceItem item || item.WorkshopItemId is null) return;
-        var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.ItemStatus, item.CurrentStatus)
+        var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.ItemStatus, item.CurrentStatus, item.WorkshopStatus, isLaundry: false)
         {
             Owner = Window.GetWindow(this),
         };
@@ -134,7 +134,11 @@ public partial class WorkshopQueueView : UserControl
     private async void LaundryInProgressGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (LaundryInProgressGrid.SelectedItem is not WorkshopLaundryItem item || item.WorkshopItemId is null) return;
-        var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.Status, item.CurrentStatus)
+        // workshop_queue's laundry_in_progress doesn't expose the raw workshop_items.status column
+        // for Laundry garments the way it does for piece items (WorkshopPieceItem.WorkshopStatus) -
+        // pass null, which makes every gate that needs it fail open (enabled) in
+        // WorkshopItemActionsWindow rather than guessed-disabled.
+        var dialog = new WorkshopItemActionsWindow(_api, item.WorkshopItemId.Value, item.GarmentName, item.OrderNumber, item.Status, item.CurrentStatus, workshopStatus: null, isLaundry: true)
         {
             Owner = Window.GetWindow(this),
         };

@@ -29,6 +29,7 @@ and then dropped in favor of this true native UI.
 | 8 CRM completeness | **Customer edit**: `CustomerFormWindow` now also handles edit (opened from Customer detail's new Edit button), loading `customers_edit_detail` and submitting to `customers_update` - fields the form doesn't show (State, Membership ID, Birthday, Anniversary, Marketing Source, Price List, GSTIN, Referral Code) are carried through unchanged from the loaded record rather than silently blanked, since the backend treats every field in the update payload as the new value. **Split payments**: `RecordPaymentWindow` can now add multiple payment-method lines (Add Line) for one payment, submitted together via `payment_lines[]` - a single fill-and-submit still works exactly as before for the common case. **New report screens**: `DormantCustomersView` (`dormant_customers`, min-days threshold) and `AuditLogView` (`audit_logs`, module/action/date filters, before/after diff panel - Super Admin/Admin only, same gating as Workshop) added as Reports tabs; `CustomerHistoryWindow` (`customer_history` - a combined ledger plus orders/payments/garments/wallet/deliveries/feedback, each its own tab) opened from Customer detail's new History button. | **done - confirmed green on CI** (run [#21](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41301198887), first try) |
 | 9 Workshop management | `WorkshopView` is now a tab strip (Queue / Schedule / Report / Billing) - the old single-page content moved unchanged into a new **Queue** tab (`WorkshopQueueView`); `MainWindow`'s own call site didn't need to change. **Schedule** (`WorkshopScheduleView`): today/tomorrow's due orders by store plus everything overdue, from `workshop_schedule`. **Report** (`WorkshopReportView`): pieces sent out per store over a period (week/15/30 days/custom), with a per-store garment breakdown and customer list, from `workshop_report`. **Billing** (`WorkshopBillingView` + `WorkshopBillingDetailWindow`): the bills list, a Generate Bill form (store - including a combined "all stores" bill - workshop, period, GST mode, basis) for accounts that can manage bills, and a bill detail view with items/payments and a Mark Paid action, from `workshop_billing_list`/`_detail`/`_generate`/`_mark_paid`. Same `workshop.manage`/`workshop.billing` permission gating as the backend - a Workshop Staff login not linked to a workshop sees an empty, disabled Billing tab, same as `wsBillingScope()` intends. | **done - confirmed green on CI** (run [#23](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41310695621), first try) |
 | 10 Order creation completeness | **Payment at order-creation time**: both `NewOrderWindow` and `NewLaundryOrderWindow` gained a Payment (optional) card - the same Add Line multi-method pattern `RecordPaymentWindow` uses, plus a wallet amount checked client-side against the customer's available balance before submit - sent via `pos_orders_create`/`laundry_orders_create`'s existing `payments`/`wallet_amount` fields. **Rate overrides**: a "Manual rate override" checkbox + rate field per cart line in `NewOrderWindow`, sent as `manual_override`/`rate_override` together or not at all (see Known gaps for a related backend permission-check gap this app is careful not to exercise). **Per-item brand/color/remarks**: Brand and Color pickers (new `pos_brands`/`pos_colors` lookups) plus a remarks field, shown in the cart grid. Laundry batches don't expose any of these three (per-garment brand/color/rate-override isn't a backend concept for weight-based batches) - only payment collection applies to `NewLaundryOrderWindow`. | **done - confirmed green on CI** (run [#25](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41311806437), first try) |
+| 11 Workshop polish + tag printing | **State-aware workshop actions**: `WorkshopItemActionsWindow` now greys out (rather than always enabling) each of the 11 lifecycle buttons based on the item's actual `workshop_status`/`item_status`/`current_status`, mirroring `workshopService.ts`'s own from-state checks as closely as the data this app has access to allows (see Known gaps for where that falls short for Laundry items, and for one deliberate judgment call on Accept's gate). After any successful action the whole button set disables itself rather than risk showing a now-stale state - reopen from the refreshed queue to continue. **Tag printing**: a new `Code39Encoder` (in `Udc.Client`, unit-tested against a known-good external reference table) plus a Print Tag button on `BarcodeLookupView` that renders the looked-up barcode as a Code 39 graphic and sends it to a Windows printer via `PrintDialog.PrintVisual` - reprints a tag for a garment already in the system, not a way to generate a brand-new barcode value. | pending CI confirmation |
 
 ## Architecture
 
@@ -175,6 +176,18 @@ The backend finding in this phase's Known gaps entry (`rate_override` honored wi
 look if this app's order-creation payloads are ever reused from a different, less careful client.
 Ten phases building successfully now, nine of them green on the very first CI attempt.
 
+**Phase 11 (Workshop polish + tag printing) is pending its first CI run.** `Udc.Client`'s new
+tests (80/80, up from 65) pass locally - `Code39Encoder`'s whole test suite checks its output
+against exact known-good module strings computed from the python-barcode library's own reference
+table (not just "does it run"), since that's the one piece of this phase genuinely verifiable
+without a real printer/scanner. `WorkshopItemActionsWindow`'s new per-button gating logic and
+`BarcodeLookupView`'s new Print Tag flow (building a `StackPanel` + `Canvas` visual and handing it
+to `PrintDialog.PrintVisual`) are WPF-only and can't be compiled here, and - unlike every other
+WPF screen in this project, which at least gets a real functional check once CI compiles it on
+`windows-latest` - printing has no way to be checked AT ALL here: CI's compile step proves the
+code builds, not that a printed tag scans. That's a genuine first for this project; see this
+phase's Known gaps entries for specifics.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -252,12 +265,21 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
   resolved `universal_services` rate and never lets it be typed in, but this is a client-side
   safeguard only, not a server-enforced one - worth knowing if this API is ever called from
   anywhere else.
-- **`WorkshopItemActionsWindow` shows all 11 lifecycle actions always**, rather than only the
-  ones valid for the item's current state - the backend is the authority on validity and returns
-  a clear error for an action attempted out of order, so nothing incorrect can actually happen,
-  but the UI doesn't yet hide inapplicable buttons the way the real app's own state-aware forms do.
-- **No tag/barcode printing** - `BarcodeLookupView` looks a barcode up; it doesn't generate or
-  print new tags.
+- **`WorkshopItemActionsWindow`'s state-aware button gating can't be fully accurate for Laundry
+  items, through no fault of this app's.** `workshop_queue`'s `laundry_in_progress` exposes the
+  history-derived `current_status` but never the raw `workshop_items.status` column the way
+  `WorkshopPieceItem.WorkshopStatus` does for piece items - so Start Processing and Complete
+  Processing (whose server-side gate needs that raw column) are left enabled for a Laundry item
+  rather than guessed at. Fixing this for real needs the backend to add that field to the Laundry
+  response - out of scope here. Separately, Accept's gate is a deliberate judgment call, not a
+  literal mirror of `acceptItem()`'s own `historyOnly(['Received'], ...)` check - see
+  `WorkshopItemActionsWindow`'s constructor doc comment for why.
+- **Tag printing renders a Code 39 barcode this app cannot verify a scanner can actually read.**
+  `BarcodeLookupView`'s Print Tag button draws the barcode graphic from a hand-ported encoding
+  table (copied from the independently-maintained python-barcode library, not reconstructed from
+  memory) - correct per that external reference, but there's no printer or scanner anywhere in
+  this project's toolchain (sandbox or CI) to physically confirm a printed tag scans. Worth a real
+  test print + scan before relying on it in a shop.
 - **Admin (users, roles, settings, print settings) is not achievable from this app at all, not
   just deferred.** Checked every file under `src/routes/mobile/` in the backend repo: there are
   no `/api/mobile/*` endpoints for user management, role management, or business settings -

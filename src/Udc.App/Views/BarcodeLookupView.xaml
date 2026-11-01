@@ -33,6 +33,7 @@
                     </Border>
                 </Grid>
                 <StackPanel x:Name="FieldsPanel" />
+                <Button Content="Print Tag" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,14,0,0" Click="PrintTagButton_Click" />
             </StackPanel>
         </Border>
     </StackPanel>
