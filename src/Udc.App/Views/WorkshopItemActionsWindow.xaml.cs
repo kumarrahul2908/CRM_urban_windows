@@ -18,10 +18,10 @@ public partial class WorkshopItemActionsWindow : Window
 
     /// <summary>
     /// <paramref name="workshopStatus"/> is the RAW <c>workshop_items.status</c> column
-    /// (Sent/Processing/Completed/...) - available for piece items (see
-    /// <c>WorkshopPieceItem.WorkshopStatus</c>) but not exposed by <c>workshop_queue</c> for Laundry
-    /// items at all, so pass null there (every gate that needs it then fails open - enabled rather
-    /// than guessed-disabled). <paramref name="currentStatus"/> is the history-derived status
+    /// (Sent/Processing/Completed/...), exposed by <c>workshop_queue</c> for both piece items
+    /// (<c>WorkshopPieceItem.WorkshopStatus</c>) and Laundry items (<c>WorkshopLaundryItem.WorkshopStatus</c>).
+    /// Still nullable here as a defensive fallback - every gate that needs it fails open (enabled
+    /// rather than guessed-disabled) if it's ever missing. <paramref name="currentStatus"/> is the history-derived status
     /// (<c>WorkshopService.getCurrentStatus()</c>) both kinds expose. <paramref name="isLaundry"/>
     /// unconditionally disables the three QC/Ironing/Packaging actions, which always error for a
     /// Laundry item server-side regardless of state (see workshopService.ts's

@@ -44,6 +44,8 @@ public partial class NewLaundryOrderWindow : Window
 
     private CustomerSummary? _selectedCustomer;
     private List<CustomerSummary> _lastCustomerSearchResults = new();
+    private List<StoreOption> _stores = new();
+    private bool _storeSelectionRequired;
     private decimal _walletBalance;
 
     public NewLaundryOrderWindow(ApiClient api)
@@ -70,20 +72,17 @@ public partial class NewLaundryOrderWindow : Window
             PaymentTypeBox.ItemsSource = paymentTypes.PaymentTypes;
             if (paymentTypes.PaymentTypes.Count > 0) PaymentTypeBox.SelectedIndex = 0;
 
-            // laundry_orders_create never reads a store_id from the payload - it always resolves
-            // the signed-in user's own fixed store (see OrderService.createLaundryOrder() /
-            // resolveAuthorizedStoreId()'s 2-arg call in orders.ts). A floating-store account has
-            // no way to satisfy it from this endpoint at all, so block the form outright rather
-            // than let the user fill it in and hit a guaranteed "select an operating store" error.
+            // laundry_orders_create now accepts a store_id for floating-store accounts the same
+            // way pos_orders_create already did (see resolveAuthorizedStoreId()'s 3-arg call in
+            // orders.ts) - mirrors NewOrderWindow's own store picker exactly.
             var storesResult = await _api.GetAvailableStoresAsync();
-            if (!storesResult.IsFixed)
+            _stores = storesResult.Stores;
+            _storeSelectionRequired = !storesResult.IsFixed;
+            if (_storeSelectionRequired)
             {
-                NoStoreBanner.Visibility = Visibility.Visible;
-                CustomerCard.IsEnabled = false;
-                BatchCard.IsEnabled = false;
-                DetailsCard.IsEnabled = false;
-                PaymentCard.IsEnabled = false;
-                CreateOrderButton.IsEnabled = false;
+                StoreCard.Visibility = Visibility.Visible;
+                StoreBox.ItemsSource = _stores;
+                if (_stores.Count > 0) StoreBox.SelectedIndex = 0;
             }
         }
         catch (ApiException ex)
@@ -323,6 +322,7 @@ public partial class NewLaundryOrderWindow : Window
     {
         if (_selectedCustomer is null) { ShowError("Select a customer first."); return; }
         if (_batches.Count == 0) { ShowError("Add at least one batch to the order."); return; }
+        if (_storeSelectionRequired && StoreBox.SelectedItem is not StoreOption) { ShowError("Select a store."); return; }
 
         decimal.TryParse(WalletAmountBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var walletAmount);
         walletAmount = Math.Max(0, walletAmount);
@@ -343,6 +343,7 @@ public partial class NewLaundryOrderWindow : Window
         {
             ClientRequestId = _clientRequestId,
             CustomerId = _selectedCustomer.Id,
+            StoreId = _storeSelectionRequired ? (StoreBox.SelectedItem as StoreOption)?.Id : null,
             Batches = _batches.Select(b => new CreateLaundryBatchLine
             {
                 ServiceId = b.ServiceId,

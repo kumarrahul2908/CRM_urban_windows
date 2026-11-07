@@ -202,6 +202,27 @@ public class PosApiClientTests
     }
 
     [Fact]
+    public async Task CreateLaundryOrderAsync_SendsStoreIdForFloatingStoreAccounts()
+    {
+        var body = """{"success":true,"data":{"order_id":92,"order_number":"ST-0092","grand_total":300,"warnings":[]}}""";
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, body);
+        using var client = new ApiClient("http://127.0.0.1:3100", handler);
+
+        await client.CreateLaundryOrderAsync(new CreateLaundryOrderRequest
+        {
+            ClientRequestId = "test-laundry-3",
+            CustomerId = 1,
+            StoreId = 2,
+            Batches = new List<CreateLaundryBatchLine>
+            {
+                new() { ServiceId = 5, Weight = 5, Rate = 60, GarmentCount = 1, Garments = new List<LaundryBatchGarmentLine> { new() { GarmentId = 10, Quantity = 1 } } },
+            },
+        });
+
+        Assert.Contains("\"store_id\":2", handler.LastRequestBody);
+    }
+
+    [Fact]
     public async Task CreateLaundryOrderAsync_SendsPaymentsAndWalletAmount()
     {
         var body = """{"success":true,"data":{"order_id":91,"order_number":"ST-0091","grand_total":300,"warnings":[]}}""";

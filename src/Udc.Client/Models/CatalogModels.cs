@@ -326,6 +326,9 @@ public sealed class CreateLaundryOrderRequest
     [JsonPropertyName("customer_id")]
     public int CustomerId { get; set; }
 
+    [JsonPropertyName("store_id")]
+    public int? StoreId { get; set; }
+
     [JsonPropertyName("batches")]
     public List<CreateLaundryBatchLine> Batches { get; set; } = new();
 

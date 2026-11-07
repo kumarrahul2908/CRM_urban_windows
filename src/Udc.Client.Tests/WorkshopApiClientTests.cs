@@ -46,10 +46,10 @@ public class WorkshopApiClientTests
           "piece":{"items":[],"total":0,"page":1,"total_pages":0},
           "laundry_pending":[{"laundry_garment_id":1,"sequence":1,"garment_name":"Shirt","total_garments":3,
             "order_id":20,"order_number":"ST-0020","due_date":"2026-11-06","customer_name":"Asha Rao",
-            "service_name":"Wash & Fold","status":"Pending","current_status":null,"workshop_item_id":null}],
+            "service_name":"Wash & Fold","status":"Pending","current_status":null,"workshop_item_id":null,"workshop_status":null}],
           "laundry_in_progress":[{"laundry_garment_id":2,"sequence":2,"garment_name":"Trouser","total_garments":3,
             "order_id":20,"order_number":"ST-0020","due_date":"2026-11-06","customer_name":"Asha Rao",
-            "service_name":"Wash & Fold","status":"Workshop","current_status":"Received","workshop_item_id":9}],
+            "service_name":"Wash & Fold","status":"Workshop","current_status":"Received","workshop_item_id":9,"workshop_status":"Sent"}],
           "accept_queue":[],"return_queue":[],"store_receive_queue":[],
           "workshops":[{"id":1,"name":"Main Workshop"}]}}
         """;
@@ -59,9 +59,11 @@ public class WorkshopApiClientTests
 
         Assert.Single(result.LaundryPending);
         Assert.Null(result.LaundryPending[0].WorkshopItemId);
+        Assert.Null(result.LaundryPending[0].WorkshopStatus);
         Assert.Single(result.LaundryInProgress);
         Assert.Equal(9, result.LaundryInProgress[0].WorkshopItemId);
         Assert.Equal("Received", result.LaundryInProgress[0].CurrentStatus);
+        Assert.Equal("Sent", result.LaundryInProgress[0].WorkshopStatus);
     }
 
     [Fact]

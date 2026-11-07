@@ -140,6 +140,9 @@ public sealed class WorkshopLaundryItem
 
     [JsonPropertyName("workshop_item_id")]
     public int? WorkshopItemId { get; set; }
+
+    [JsonPropertyName("workshop_status")]
+    public string? WorkshopStatus { get; set; }
 }
 
 /// <summary><c>GET /api/mobile/workshop_queue</c>.</summary>

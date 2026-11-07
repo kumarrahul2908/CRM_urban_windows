@@ -29,13 +29,16 @@
             <TextBlock x:Name="ErrorText" Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap" />
         </Border>
 
-        <Border x:Name="NoStoreBanner" DockPanel.Dock="Top" Background="{StaticResource ErrorBgBrush}" CornerRadius="8" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed">
-            <TextBlock Foreground="{StaticResource ErrorBrush}" TextWrapping="Wrap"
-                       Text="Your account has no fixed store. The backend's Laundry order endpoint (laundry_orders_create) always uses the signed-in user's own fixed store and has no way to accept a store choice from this app - a floating-store account can't create a Laundry order here. Use the web app instead, or sign in with a fixed-store account." />
-        </Border>
-
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
+
+                <!-- Store (only when the user has no fixed store) -->
+                <Border x:Name="StoreCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="STORE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,10" />
+                        <ComboBox x:Name="StoreBox" DisplayMemberPath="StoreName" />
+                    </StackPanel>
+                </Border>
 
                 <!-- Customer -->
                 <Border x:Name="CustomerCard" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">

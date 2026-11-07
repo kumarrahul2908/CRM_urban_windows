@@ -30,6 +30,7 @@ and then dropped in favor of this true native UI.
 | 9 Workshop management | `WorkshopView` is now a tab strip (Queue / Schedule / Report / Billing) - the old single-page content moved unchanged into a new **Queue** tab (`WorkshopQueueView`); `MainWindow`'s own call site didn't need to change. **Schedule** (`WorkshopScheduleView`): today/tomorrow's due orders by store plus everything overdue, from `workshop_schedule`. **Report** (`WorkshopReportView`): pieces sent out per store over a period (week/15/30 days/custom), with a per-store garment breakdown and customer list, from `workshop_report`. **Billing** (`WorkshopBillingView` + `WorkshopBillingDetailWindow`): the bills list, a Generate Bill form (store - including a combined "all stores" bill - workshop, period, GST mode, basis) for accounts that can manage bills, and a bill detail view with items/payments and a Mark Paid action, from `workshop_billing_list`/`_detail`/`_generate`/`_mark_paid`. Same `workshop.manage`/`workshop.billing` permission gating as the backend - a Workshop Staff login not linked to a workshop sees an empty, disabled Billing tab, same as `wsBillingScope()` intends. | **done - confirmed green on CI** (run [#23](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41310695621), first try) |
 | 10 Order creation completeness | **Payment at order-creation time**: both `NewOrderWindow` and `NewLaundryOrderWindow` gained a Payment (optional) card - the same Add Line multi-method pattern `RecordPaymentWindow` uses, plus a wallet amount checked client-side against the customer's available balance before submit - sent via `pos_orders_create`/`laundry_orders_create`'s existing `payments`/`wallet_amount` fields. **Rate overrides**: a "Manual rate override" checkbox + rate field per cart line in `NewOrderWindow`, sent as `manual_override`/`rate_override` together or not at all (see Known gaps for a related backend permission-check gap this app is careful not to exercise). **Per-item brand/color/remarks**: Brand and Color pickers (new `pos_brands`/`pos_colors` lookups) plus a remarks field, shown in the cart grid. Laundry batches don't expose any of these three (per-garment brand/color/rate-override isn't a backend concept for weight-based batches) - only payment collection applies to `NewLaundryOrderWindow`. | **done - confirmed green on CI** (run [#25](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41311806437), first try) |
 | 11 Workshop polish + tag printing | **State-aware workshop actions**: `WorkshopItemActionsWindow` now greys out (rather than always enabling) each of the 11 lifecycle buttons based on the item's actual `workshop_status`/`item_status`/`current_status`, mirroring `workshopService.ts`'s own from-state checks as closely as the data this app has access to allows (see Known gaps for where that falls short for Laundry items, and for one deliberate judgment call on Accept's gate). After any successful action the whole button set disables itself rather than risk showing a now-stale state - reopen from the refreshed queue to continue. **Tag printing**: a new `Code39Encoder` (in `Udc.Client`, unit-tested against a known-good external reference table) plus a Print Tag button on `BarcodeLookupView` that renders the looked-up barcode as a Code 39 graphic and sends it to a Windows printer via `PrintDialog.PrintVisual` - reprints a tag for a garment already in the system, not a way to generate a brand-new barcode value. | **done - confirmed green on CI** (run [#27](https://github.com/kumarrahul2908/CRM_urban_windows/actions/runs/41318645624), first try) |
+| 12 Backend-unblocked follow-ups | 4 backend gaps closed in `urban-dry-clean-crm-node` (PR [#3](https://github.com/kumarrahul2908/urban-dry-clean-crm-node/pull/3)) unblocked 2 real client features, done here: **`NewLaundryOrderWindow`** no longer blocks floating-store accounts - it shows the same store picker `NewOrderWindow` already had (now that `laundry_orders_create` accepts `store_id`) instead of refusing the whole form. **`WorkshopItemActionsWindow`** now gates Start/Complete Processing for Laundry items the same way it already did for piece items (now that `workshop_queue` exposes `workshop_status` for them too), instead of leaving those two buttons always enabled. The other 2 backend fixes (server-side Laundry rate resolution, the `rate_override` permission-check gap) needed no client change - this app was already careful not to exercise either gap - see Known gaps' "Resolved in Phase 12". | pending CI confirmation |
 
 ## Architecture
 
@@ -187,6 +188,22 @@ verifiable without hardware, and its test suite checks exact known-good module s
 the python-barcode library's reference table, not just "does it run." Eleven phases building
 successfully now, ten of them green on the very first CI attempt.
 
+**Phase 12 (backend-unblocked follow-ups) is pending its first CI run.** `Udc.Client`'s tests
+(81/81, up from 80) pass locally, including two new ones added specifically for this phase:
+`CreateLaundryOrderAsync_SendsStoreIdForFloatingStoreAccounts` (asserts `store_id` is actually
+serialized into the POST body - `FakeHttpMessageHandler` needed a `LastRequestBody` property read
+eagerly inside `SendAsync`, since the real `ApiClient` disposes its `HttpRequestMessage`/`JsonContent`
+right after the call returns, so reading `LastRequest.Content` afterwards throws
+`ObjectDisposedException`) and an extended `GetWorkshopQueueAsync_ParsesLaundryPendingAndInProgress`
+asserting the new `WorkshopLaundryItem.WorkshopStatus` field parses. Both `Udc.App` changes reuse
+already-proven patterns byte-for-byte (`NewLaundryOrderWindow`'s store picker is `NewOrderWindow`'s,
+copied field-for-field; `WorkshopItemActionsWindow`'s gating logic for Laundry items was already
+written to use a real `workshopStatus` value - only the caller in `WorkshopQueueView.xaml.cs` was
+passing `null` - so this phase is narrower and lower-risk than most, but still WPF-only code that
+can't be compiled in this Linux sandbox (confirmed again: `Microsoft.NET.Sdk.WindowsDesktop.targets`
+is still not found here). Twelve phases building successfully now, if this one goes green on the
+first try too.
+
 ## Building
 
 ### One-time setup: a token to read the backend repo
@@ -235,44 +252,9 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
 
 ## Known gaps
 
-- **`pos_orders_create` has a permission-check gap around `rate_override`, and this app is careful
-  never to exercise it.** Checked `OrderService.priceLine()`: the `pos.manual_rate_override`
-  permission (and the audit log entry) is only checked in the `claimsManualOverride` branch - but
-  if a configured price already exists, sending a `rate_override` value *without* `manual_override:
-  true` still gets honored (it falls into the normal-pricing `else` branch, which reads
-  `hasRateOverride ? rateOverrideRaw : rt.piece_rate` with no permission check or audit trail at
-  all). `NewOrderWindow` always sends `rate_override` and `manual_override: true` together, or
-  neither - it never sends one without the other - so this app itself can't be used to exploit the
-  gap, but it's a real backend quirk worth knowing about, not something fixable from a client-only
-  repo.
 - **The New Order / New Laundry Order total shown while building is an estimate** (subtotal, the
   typed discount, and delivery charge only) - tax and the urgent-level surcharge are computed
   server-side and only appear in the real total once the order is actually created.
-- **A floating-store account (no fixed store) cannot create a Laundry order at all, and this isn't
-  something the client can work around.** Checked `laundry_orders_create` in orders.ts: unlike
-  `pos_orders_create`, it calls `resolveAuthorizedStoreId(db, ctx)` with no second argument, so it
-  never reads a `store_id` from the request body - it always resolves the signed-in user's own
-  fixed store and fails outright (`needs_selection` with nothing the client can supply to satisfy
-  it) for anyone without one. `NewLaundryOrderWindow` detects this up front (via
-  `pos_available_stores`' `is_fixed`) and blocks the whole form with an explanation rather than
-  letting the user fill it in and hit a guaranteed error. Fixing this for real needs a backend
-  change (accepting `store_id` the way the piece-order endpoint does) - out of scope here.
-- **`laundry_orders_create` trusts the client-supplied batch `rate` rather than resolving it
-  server-side.** Unlike `pos_orders_create`'s `priceLine()`, `OrderService.createLaundryOrder()`
-  takes `batch.rate` directly from the request body (only checking it's `> 0`) - it never looks up
-  the price list itself. `NewLaundryOrderWindow` always fills this from the already-price-list-
-  resolved `universal_services` rate and never lets it be typed in, but this is a client-side
-  safeguard only, not a server-enforced one - worth knowing if this API is ever called from
-  anywhere else.
-- **`WorkshopItemActionsWindow`'s state-aware button gating can't be fully accurate for Laundry
-  items, through no fault of this app's.** `workshop_queue`'s `laundry_in_progress` exposes the
-  history-derived `current_status` but never the raw `workshop_items.status` column the way
-  `WorkshopPieceItem.WorkshopStatus` does for piece items - so Start Processing and Complete
-  Processing (whose server-side gate needs that raw column) are left enabled for a Laundry item
-  rather than guessed at. Fixing this for real needs the backend to add that field to the Laundry
-  response - out of scope here. Separately, Accept's gate is a deliberate judgment call, not a
-  literal mirror of `acceptItem()`'s own `historyOnly(['Received'], ...)` check - see
-  `WorkshopItemActionsWindow`'s constructor doc comment for why.
 - **Tag printing renders a Code 39 barcode this app cannot verify a scanner can actually read.**
   `BarcodeLookupView`'s Print Tag button draws the barcode graphic from a hand-ported encoding
   table (copied from the independently-maintained python-barcode library, not reconstructed from
@@ -304,3 +286,25 @@ dotnet test src/Udc.Client.Tests/Udc.Client.Tests.csproj
   backend repo) is no longer hypothetical now that `BackgroundJobRunner` actually runs it nightly
   - if this PC doesn't have the MySQL/MariaDB command-line client installed, check the log
   (`File > Open logs folder`) rather than assuming backups are happening silently.
+
+### Resolved in Phase 12 (backend fixes in `urban-dry-clean-crm-node`)
+
+Four gaps listed above as "not fixable from a client-only repo" were closed on the backend side
+(PR [#3](https://github.com/kumarrahul2908/urban-dry-clean-crm-node/pull/3)), and this phase
+updated the client to actually use two of them:
+
+- **Floating-store accounts can now create Laundry orders.** `laundry_orders_create` accepts a
+  `store_id` the same way `pos_orders_create` already did. `NewLaundryOrderWindow` no longer blocks
+  the form for a floating-store account - it shows the same store picker `NewOrderWindow` already
+  had, and sends the chosen store's id.
+- **Laundry workshop items are now state-gated like piece items.** `workshop_queue`'s
+  `laundry_in_progress` now exposes `workshop_status` (the raw `workshop_items.status` column), so
+  `WorkshopItemActionsWindow` gates Start/Complete Processing for a Laundry item exactly the way it
+  already did for piece items, instead of leaving them always enabled.
+- **`laundry_orders_create` now resolves the batch rate server-side** from the price list, instead
+  of trusting the client-supplied `rate`. No client change was needed - `NewLaundryOrderWindow`
+  already only ever sent the price-list-resolved rate - but this is worth knowing if the API is
+  ever called from anywhere else.
+- **The `rate_override` permission-check gap in `priceLine()` is fixed** - it's no longer honored
+  without `manual_override: true`. `NewOrderWindow` was already careful to never exercise the old
+  gap, so no client change was needed here either.
