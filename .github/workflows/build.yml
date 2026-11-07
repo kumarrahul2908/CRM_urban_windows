@@ -35,6 +35,7 @@ jobs:
           name: urban-dry-clean-crm-native-win-x64
           path: ${{ env.PUBLISH_DIR }}
           if-no-files-found: error
+          retention-days: 14
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -47,4 +48,5 @@ jobs:
         with:
           name: UrbanDryCleanCRM-Setup
           path: installer/Output/UrbanDryCleanCRM-Setup.exe
+          retention-days: 14
           if-no-files-found: error
